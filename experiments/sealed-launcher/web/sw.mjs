@@ -12,7 +12,8 @@ import {serve} from './lib/podstore.mjs';
 import {kv, resources} from './lib/idb.mjs';
 
 const INSTANCE = crypto.randomUUID();
-let pod = null, home = null, loads = 0;
+// loads: modules instantiated by this instance; boots: boot messages accepted from the page.
+let pod = null, home = null, objectId = null, loads = 0, boots = 0;
 
 self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
@@ -26,6 +27,7 @@ async function load(rec) {
   if (WebAssembly.Module.imports(module).length) throw new Error('module imports are not allowed');
   pod = await createPod(module, rec.owner);
   home = rec.home;
+  objectId = rec.objectId;
   loads++;
 }
 
@@ -42,9 +44,9 @@ self.addEventListener('message', e => {
   const reply = p => p.then(v => port.postMessage({ok: true, ...v}), err => port.postMessage({ok: false, error: String(err)}));
   if (e.data?.type === 'boot') {
     const rec = {module: new Uint8Array(e.data.module), objectId: e.data.objectId, owner: e.data.owner, home: e.data.home};
-    reply(load(rec).then(() => kv.set('boot', rec)).then(() => ({instance: INSTANCE})));
+    reply(load(rec).then(() => kv.set('boot', rec)).then(() => ({instance: INSTANCE, boots: ++boots})));
   } else if (e.data?.type === 'status') {
-    reply(ensure().then(booted => ({booted, instance: INSTANCE, loads})));
+    reply(ensure().then(booted => ({booted, instance: INSTANCE, objectId, loads, boots})));
   }
 });
 

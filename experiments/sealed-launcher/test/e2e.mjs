@@ -115,6 +115,18 @@ async function scan(page, url, ms = 30000) {
   throw new Error(`launcher did not settle: ${JSON.stringify(await statusOf(page))}`);
 }
 
+
+/** Page-side access to the worker's boot record in IndexedDB, for tamper tests. */
+const BOOT_RECORD = `window.__boot ??= (() => {
+  const store = mode => new Promise((res, rej) => { const o = indexedDB.open('qrw'); o.onsuccess = () => res(o.result.transaction('kv', mode).objectStore('kv')); o.onerror = () => rej(o.error); });
+  const done = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const hex = b => Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, '0')).join('');
+  return {
+    digest: async () => { const r = await done((await store('readonly')).get('boot')); return {objectId: r.objectId, moduleSha256: hex(await crypto.subtle.digest('SHA-256', r.module))}; },
+    corrupt: async () => { const r = await done((await store('readonly')).get('boot')); r.module[100] ^= 1; await done((await store('readwrite')).put(r, 'boot')); },
+  };
+})()`;
+
 const servers = [];
 let cdp;
 try {
@@ -215,18 +227,41 @@ try {
     return {before: instanceA, after: r.instance};
   });
 
-  await step('re-scanning the app code boots from the verified local cache', async () => {
+  await step('module corrupted in IndexedDB is refused on cold start, before instantiation', async () => {
+    await page.eval(BOOT_RECORD);
+    await page.eval('__boot.corrupt()');
+    const rec = await page.eval('__boot.digest()');
+    expect(rec.objectId === p2sha && rec.moduleSha256 !== p2sha, 'stored bytes differ from their object ID');
+    await cdp.send('ServiceWorker.stopAllWorkers', {}, page.sessionId);
+    await new Promise(r => setTimeout(r, 500));
+    const r = await page.eval("qrw.get('/notes/a.txt')");
+    expect(r.status === 500 && /does not match its object ID/.test(r.text) && r.loads === '0', JSON.stringify(r));
+    return {status: r.status, text: r.text, loads: r.loads};
+  });
+
+  await step('re-scanning the app code boots from the verified local cache (and repairs the record)', async () => {
     const s = await scan(page, sealed.appLink);
     expect(s.phase === 'running' && s.source === 'cache', JSON.stringify(s));
+    const r = await page.eval("qrw.get('/notes/a.txt')");
+    expect(r.status === 200, `pod serves again: ${r.status}`);
     return {source: s.source};
   });
 
   await step('tampered app code (wrong key) fails at rule 4 and runs nothing new', async () => {
+    await page.eval(BOOT_RECORD);
+    const before = await page.eval('qrw.workerStatus()');
+    const recordBefore = await page.eval('__boot.digest()');
     const p = Uint8Array.from(Buffer.from(sealed.pointer, 'hex'));
     p[40] ^= 1;
     const s = await scan(page, `${LAUNCHER.toUpperCase()}#${base43.encode(p)}`);
     expect(s.phase === 'error' && s.rule === 4, JSON.stringify(s));
-    return {error: s.error};
+    await page.eval(BOOT_RECORD);
+    const after = await page.eval('qrw.workerStatus()');
+    const recordAfter = await page.eval('__boot.digest()');
+    expect(after.instance === before.instance && after.boots === before.boots && after.loads === before.loads,
+      `no new boot or instantiation: ${JSON.stringify({before, after})}`);
+    expect(after.objectId === p2sha && JSON.stringify(recordAfter) === JSON.stringify(recordBefore), 'boot record unchanged');
+    return {error: s.error, boots: after.boots, loads: after.loads};
   });
 
   await step('pointer to an unseeded blob fails at rule 2', async () => {

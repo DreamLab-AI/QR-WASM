@@ -12,15 +12,15 @@
     {
       "name": "home code pairs with the remote signer; fragment removed from URL",
       "ok": true,
-      "ms": 512,
+      "ms": 487,
       "detail": {
-        "owner": "3bdd4e679acca81f34b17f4a7c6eab470748cd8bedd243cd96389745d7567e80"
+        "owner": "3fbc9d7158eaca49797d6b6a7d5b5a6d8e094f9c2a23f6915d40c86b1301c962"
       }
     },
     {
       "name": "app code: fetch from home web seed, verify, unseal, boot pod in service worker",
       "ok": true,
-      "ms": 248,
+      "ms": 47,
       "detail": {
         "source": "home web seed",
         "tried": [
@@ -32,7 +32,7 @@
     {
       "name": "signed write lands locally and at home (one NIP-98 signature via NIP-46)",
       "ok": true,
-      "ms": 104,
+      "ms": 101,
       "detail": {
         "local": 201,
         "home": 201,
@@ -42,7 +42,7 @@
     {
       "name": "local pod serves the resource and the LDP container",
       "ok": true,
-      "ms": 11,
+      "ms": 10,
       "detail": {
         "etag": "\"1145f27fe642fae18e3728410d70329e0713488f71e322c72406fb48af4addbc\"",
         "container": [
@@ -55,7 +55,7 @@
     {
       "name": "unsigned and wrongly signed writes are refused by the module",
       "ok": true,
-      "ms": 7,
+      "ms": 9,
       "detail": {
         "unsigned": 401,
         "forged": 401
@@ -64,7 +64,7 @@
     {
       "name": "signer policy refuses out-of-scope requests from the browser",
       "ok": true,
-      "ms": 114,
+      "ms": 112,
       "detail": {
         "outside": "u is not under home",
         "note": "only kind 27235 (NIP-98) is signed"
@@ -75,14 +75,24 @@
       "ok": true,
       "ms": 563,
       "detail": {
-        "before": "c16a4d77-a81a-489d-9721-298a1468cc95",
-        "after": "4c71d560-c1ce-4e1d-8954-e152617cbeda"
+        "before": "fe632b1e-0a54-4cf6-b453-13f0251d0954",
+        "after": "178a8086-2714-491f-9ada-88d50ed1d408"
       }
     },
     {
-      "name": "re-scanning the app code boots from the verified local cache",
+      "name": "module corrupted in IndexedDB is refused on cold start, before instantiation",
       "ok": true,
-      "ms": 45,
+      "ms": 565,
+      "detail": {
+        "status": 500,
+        "text": "Error: module does not match its object ID",
+        "loads": "0"
+      }
+    },
+    {
+      "name": "re-scanning the app code boots from the verified local cache (and repairs the record)",
+      "ok": true,
+      "ms": 52,
       "detail": {
         "source": "cache"
       }
@@ -90,15 +100,17 @@
     {
       "name": "tampered app code (wrong key) fails at rule 4 and runs nothing new",
       "ok": true,
-      "ms": 45,
+      "ms": 59,
       "detail": {
-        "error": "rule 4: AES-GCM authentication failed"
+        "error": "rule 4: AES-GCM authentication failed",
+        "boots": 1,
+        "loads": 1
       }
     },
     {
       "name": "pointer to an unseeded blob fails at rule 2",
       "ok": true,
-      "ms": 45,
+      "ms": 46,
       "detail": {
         "tried": [
           "cache: absent",
@@ -109,7 +121,7 @@
     {
       "name": "the home code is single-use: a second browser cannot pair with it",
       "ok": true,
-      "ms": 663,
+      "ms": 503,
       "detail": {
         "error": "secret invalid or already used"
       }
