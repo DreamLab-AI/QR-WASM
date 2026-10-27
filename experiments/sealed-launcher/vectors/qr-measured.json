@@ -1,0 +1,21 @@
+{
+  "generator": "qrcode 1.5.4 + jsQR 1.4.0, level L",
+  "origin": "HTTPS://LAUNCHER.EXAMPLE/",
+  "measured": {
+    "app code, 104 B pointer": {
+      "version": 6,
+      "modules": 41,
+      "pointerBytes": 104
+    },
+    "app code + v1 locator, 124 B pointer": {
+      "version": 7,
+      "modules": 45,
+      "pointerBytes": 124
+    },
+    "home code": {
+      "version": 9,
+      "modules": 53,
+      "bytes": 215
+    }
+  }
+}

@@ -1,0 +1,535 @@
+{
+  "cases": [
+    {
+      "expect": {
+        "body": "eyJAY29udGV4dCI6eyJsZHAiOiJodHRwOi8vd3d3LnczLm9yZy9ucy9sZHAjIn0sIkBpZCI6Ii8iLCJAdHlwZSI6WyJsZHA6Q29udGFpbmVyIiwibGRwOkJhc2ljQ29udGFpbmVyIl0sImxkcDpjb250YWlucyI6W119",
+        "op": "",
+        "status": 200
+      },
+      "name": "GET empty root container",
+      "request": {
+        "body": "",
+        "headers": {},
+        "method": "GET",
+        "path": "/",
+        "url": "https://pod.example/"
+      },
+      "stored": {
+        "children": [],
+        "kind": "container"
+      }
+    },
+    {
+      "expect": {
+        "body": "eyJAY29udGV4dCI6eyJsZHAiOiJodHRwOi8vd3d3LnczLm9yZy9ucy9sZHAjIn0sIkBpZCI6Ii9jLyIsIkB0eXBlIjpbImxkcDpDb250YWluZXIiLCJsZHA6QmFzaWNDb250YWluZXIiXSwibGRwOmNvbnRhaW5zIjpbeyJAaWQiOiIvYy9hLndhc20ifSx7IkBpZCI6Ii9jL2QvIn1dfQ==",
+        "op": "",
+        "status": 200
+      },
+      "name": "GET container lists children",
+      "request": {
+        "body": "",
+        "headers": {},
+        "method": "GET",
+        "path": "/c/",
+        "url": "https://pod.example/c/"
+      },
+      "stored": {
+        "children": [
+          "a.wasm",
+          "d/"
+        ],
+        "kind": "container"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 404
+      },
+      "name": "GET absent resource",
+      "request": {
+        "body": "",
+        "headers": {},
+        "method": "GET",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "put",
+        "status": 201
+      },
+      "name": "PUT by owner creates",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI0NGUwMTk3ZWYwMGY1YmY3NDIwZTQ2MDgwNWIwOTcyYmNiMWY1N2JhMWMyZjhmMThmMWM0MzQxZjgyOWY4MWE5Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiJiMWFmMWM5NDQ3NmIxYjVmMGVkZDRlNGJlZDg3NGIzYTYzYTk5M2E5MmFiMmNhOThkODM4ODFiMTI2YTg3ZWNmMzhiYTY2MzBmODliZmNkZGJkNjA3MjU2ZWM4YjVmMjZlMzU0Y2I0ZTNhMzMzMDRiZjE0NDlmZjA0MTEyNjdmOCIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0=",
+          "content-type": "application/wasm"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "put",
+        "status": 204
+      },
+      "name": "PUT by owner replaces",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc4OTk5OTk3MCwiaWQiOiJiMWY3MzRhZDA2ZDU5Y2I5NzY3N2IxYjg5NTZjMzk5NWE4MmFlNWM1YjA2ZGEyYjIyOGMyMjRiMjRhMDAxNTQ4Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiIxYTE5MTZiOWRhZjM5YzEwMDM5ODJkYWM4ODRhYThiZWY2ZWZmNTVhMDEwMGNmNDE3YjViYmE4Y2ZiY2JiNDgyMzIxNWU5ODgwZGU0NDhhYjYxOGRiNTU2NDc1MDUzODlhMjhlYzQ5ODY4YThjNDcwNDA5NjQ5OTBjMTM5YTIyOCIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0=",
+          "content-type": "application/wasm"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "body": "AGFzbQEAAAA=",
+        "contentType": "application/wasm",
+        "kind": "resource"
+      }
+    },
+    {
+      "expect": {
+        "body": "AGFzbQEAAAA=",
+        "op": "",
+        "status": 200
+      },
+      "name": "GET resource",
+      "request": {
+        "body": "",
+        "headers": {},
+        "method": "GET",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "body": "AGFzbQEAAAA=",
+        "contentType": "application/wasm",
+        "kind": "resource"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 200
+      },
+      "name": "HEAD resource",
+      "request": {
+        "body": "",
+        "headers": {},
+        "method": "HEAD",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "body": "AGFzbQEAAAA=",
+        "contentType": "application/wasm",
+        "kind": "resource"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 304
+      },
+      "name": "GET If-None-Match current ETag",
+      "request": {
+        "body": "",
+        "headers": {
+          "if-none-match": "\"93a44bbb96c751218e4c00d479e4c14358122a389acca16205b1e4d0dc5f9476\""
+        },
+        "method": "GET",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "body": "AGFzbQEAAAA=",
+        "contentType": "application/wasm",
+        "kind": "resource"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT without auth",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {},
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT with malformed auth",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr !!!"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT with bad signature",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI0NGUwMTk3ZWYwMGY1YmY3NDIwZTQ2MDgwNWIwOTcyYmNiMWY1N2JhMWMyZjhmMThmMWM0MzQxZjgyOWY4MWE5Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiIwMWFmMWM5NDQ3NmIxYjVmMGVkZDRlNGJlZDg3NGIzYTYzYTk5M2E5MmFiMmNhOThkODM4ODFiMTI2YTg3ZWNmMzhiYTY2MzBmODliZmNkZGJkNjA3MjU2ZWM4YjVmMjZlMzU0Y2I0ZTNhMzMzMDRiZjE0NDlmZjA0MTEyNjdmOCIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0="
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 403
+      },
+      "name": "PUT by non-owner",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiIzYWUzMzE1NWVmZWVmN2E1MWRjYzNkMjNmZDE2YTc3OGQyMmUwODc2MzUyMGM1NDRiMGY5NTQyZTAxY2ZjNjIzIiwia2luZCI6MjcyMzUsInB1YmtleSI6IjRkNGI2Y2QxMzYxMDMyY2E5YmQyYWViOWQ5MDBhYTRkNDVkOWVhZDgwYWM5NDIzMzc0YzQ1MWE3MjU0ZDA3NjYiLCJzaWciOiJlMzE1YWVjYWU1NWRmZmI0MzNhMDY1MGQ2NjYyZTRjMTkzYjUyZTE4ZTYzNWFiNmEwOTQxZjRlYTQyNjdlNzczMDIwYjk2NmIzOWZiZTYxMTQ0OWJmMzdiMmY1ODA2MzBhOWQzMThlNzQxYjc5Mjg3OWZmODQ0MTZhOWIwNzQ1ZSIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0=",
+          "content-type": "application/wasm"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT with stale event",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc4OTk5OTkzOSwiaWQiOiJhNTc0MDkwNDU5YmRkMWQ2ZDQzODUyNWQwNzcwODdkOWZkZWMxZjBjZTQxOTllZjIwODY4ZGNmNzUzOGVjYjNmIiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiIwMzU5NGE1MjIyYTgzYzBmY2VlNGRkYTBkNTI3ODgxZDlkNTMyNzgyMjBjNmQxMWRiMGFhZTdkMDY3YmMyMTQwYmUwMjA4MmJhYjEyMjU1OTk2YjA1NmE1NzZiYTM3ZmI0ZTA5NTlmY2ZmYjJlMWNkM2VmZGE0NGVjNTU3YmRhYSIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0=",
+          "content-type": "application/wasm"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT with event from the future",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDA2MSwiaWQiOiI2Y2JhNzM0MWRlNzBlYzEzZjQyMTNjYmZiYzRkNTg4MWNlMTViNTFkYWE2MTlmMWVmNzQ3MTY4ZmNkZTIzMmI0Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiJmNmEwZWI2OTY0MWNjMTMyYmNjOTgzYmZiNzA2MGQwNDMyOTlhYmU4OTZiOWViNmEyNjAxZmY0M2YzMWVkZTE5NzM5YmUxMGI4ODU4ZTlkM2FlNzU0ZDE4YzYzYTU0NDFmMTJkOWVjMWQwMmM5N2UxZmU4ZjI0YjQyZmNjNTEwYiIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0=",
+          "content-type": "application/wasm"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT signed for another URL",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI2Yjg0YzA2M2Q5OGFmZWJmM2QxMWM3NWRiOGI1MzJkYjY2NGExZWUwN2JmN2U0NGM5Mjc0NWVmMTY3Y2M1ZDMwIiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiIzOGY3NThmYjY1YTJhZDBlZjcxNTg4Mjc4ZDI4M2Q5YmMyMDQyNGJkNDk2NmMyMjI1Y2VjN2E2YWVhMTJkMmE0M2Q4ZGVhNzZiN2UwYzNjMzVhYzRkNWQxNGZmMzhkOTI5YmRkOTFmM2I0OTIzZWZjZDY3MTM5MTlhZjE3NGM4NiIsInRhZ3MiOltbInUiLCJodHRwczovL2V2aWwuZXhhbXBsZS9hLndhc20iXSxbIm1ldGhvZCIsIlBVVCJdLFsicGF5bG9hZCIsIjkzYTQ0YmJiOTZjNzUxMjE4ZTRjMDBkNDc5ZTRjMTQzNTgxMjJhMzg5YWNjYTE2MjA1YjFlNGQwZGM1Zjk0NzYiXV19"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT with payload hash mismatch",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI2OWY1ZTIzYWU1ZDA0MTJhODQzM2FhYmEwYzUzMTAzNzE4N2I4MmE3NThjMGM1YWNlNmZlMTQ0YzI2ZmU2N2Q2Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiI5ZjEyY2Q4ZTBiZDIyZDQ1YjYyOGIxOTUzNTBjNDc0NWQxZjM5NGZlNDRhMmM2OGQ3ZDM0ODhkMzgyZmI1NTQ5MTBhMWZhMTBkNzAyYTQxMjBlMjhhMGMzODhmZmY0NzNkMTg3OTU5NjVkZThhNzU4MjIwMWI3NTIxOWVjNDQxNCIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiZDkyOThhMTBkMWIwNzM1ODM3ZGM0YmQ4NWRhYzY0MWIwZjNjZWYyN2E0N2U1ZDUzYTU0ZjJmM2Y1YjJmY2ZmYSJdXX0="
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 412
+      },
+      "name": "PUT If-None-Match * over existing",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI0NGUwMTk3ZWYwMGY1YmY3NDIwZTQ2MDgwNWIwOTcyYmNiMWY1N2JhMWMyZjhmMThmMWM0MzQxZjgyOWY4MWE5Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiJiMWFmMWM5NDQ3NmIxYjVmMGVkZDRlNGJlZDg3NGIzYTYzYTk5M2E5MmFiMmNhOThkODM4ODFiMTI2YTg3ZWNmMzhiYTY2MzBmODliZmNkZGJkNjA3MjU2ZWM4YjVmMjZlMzU0Y2I0ZTNhMzMzMDRiZjE0NDlmZjA0MTEyNjdmOCIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0=",
+          "if-none-match": "*"
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "body": "AGFzbQEAAAA=",
+        "contentType": "application/wasm",
+        "kind": "resource"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 412
+      },
+      "name": "PUT If-Match stale ETag",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI0NGUwMTk3ZWYwMGY1YmY3NDIwZTQ2MDgwNWIwOTcyYmNiMWY1N2JhMWMyZjhmMThmMWM0MzQxZjgyOWY4MWE5Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiJiMWFmMWM5NDQ3NmIxYjVmMGVkZDRlNGJlZDg3NGIzYTYzYTk5M2E5MmFiMmNhOThkODM4ODFiMTI2YTg3ZWNmMzhiYTY2MzBmODliZmNkZGJkNjA3MjU2ZWM4YjVmMjZlMzU0Y2I0ZTNhMzMzMDRiZjE0NDlmZjA0MTEyNjdmOCIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0=",
+          "if-match": "\"00\""
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "body": "AGFzbQEAAAA=",
+        "contentType": "application/wasm",
+        "kind": "resource"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "put",
+        "status": 201
+      },
+      "name": "PUT event content with NIP-01 escapes",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoicVwiYlxcblxuY1x1MDAwMcOpIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiJhNWVkNmNlMTkyMWM4MTgwYjA5MThiODgyZjQxOWM5ZDgwZGRmMjE2NDViNWE3NTZjY2JhN2VhOGQzYWQwNWM1Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiIyOWU2NDU3ZGMwYjc4MzQyMDUxNWEzNmZmY2JiMTZiYzU0ZDdmYjUyOWRhNmNjYWQyNDgwYjdiOTAyNGNlYTA3YmU0OTc5N2U1MGM0MzY5MzI0NDUwOTFlYTM0MjkyYTdhZGIwZTZjMDc5NzZjMjU2Mjk3YWJkYmE0MjRkZDRjNyIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0="
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 401
+      },
+      "name": "PUT event signed with \\u0001 escaping is rejected",
+      "request": {
+        "body": "AGFzbQEAAAA=",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoicVwiYlxcblxuY1x1MDAwMcOpIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiJlZjM5ODUwMGI0MDZlMDQ1MWRmNzNhNzZhYTNmZjg4ODBkZjlhMDBhYTg1MjU0MDgzYTc3ZDlkMWMyMDJhMWE4Iiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiJlMGU3MTcyZGQxY2RjZTcyZDc2ZWYzNjI4MGZiMmVlNTBlM2FkYzNkMGVjMmU5OTI3OGQ1YWQ0ODhiMWRhMjY5OTg2ZmJiOTNmNjlkODhlNmIzOWNjZDQxZmZlNjA2OTFmOWIwZmM2MTliOTZmNTc4OWEyZjBiM2ZlYjgwYmYxYyIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiUFVUIl0sWyJwYXlsb2FkIiwiOTNhNDRiYmI5NmM3NTEyMThlNGMwMGQ0NzllNGMxNDM1ODEyMmEzODlhY2NhMTYyMDViMWU0ZDBkYzVmOTQ3NiJdXX0="
+        },
+        "method": "PUT",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "delete",
+        "status": 204
+      },
+      "name": "DELETE by owner",
+      "request": {
+        "body": "",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI2MmM1ZjRkMWJlMjVkYzYwNjhhMTUyYTUzMWMxZjY2NzJiYzY5YmE5OTFlNGYwNzU5OWY3MmVkMmYzYjM5YTVmIiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiI4ZDczODQ5MTU1ZjZmZThkYTQzZjExZjRiNDRjZDc2ZDA3ODRlNWUyOTg1ZTFkNGMxYzZkZmEzNGUzMDJhYTA5NTNmODUyN2U0ODE5ODVlOGYzMzYzNThhMTJmMmNkNzMxYmQ2MDgxMjBmY2EzZDc1MzkxZGIyMzNmMGMyMWZjMSIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiREVMRVRFIl1dfQ=="
+        },
+        "method": "DELETE",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "body": "AGFzbQEAAAA=",
+        "contentType": "application/wasm",
+        "kind": "resource"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 404
+      },
+      "name": "DELETE absent",
+      "request": {
+        "body": "",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI2MmM1ZjRkMWJlMjVkYzYwNjhhMTUyYTUzMWMxZjY2NzJiYzY5YmE5OTFlNGYwNzU5OWY3MmVkMmYzYjM5YTVmIiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiI4ZDczODQ5MTU1ZjZmZThkYTQzZjExZjRiNDRjZDc2ZDA3ODRlNWUyOTg1ZTFkNGMxYzZkZmEzNGUzMDJhYTA5NTNmODUyN2U0ODE5ODVlOGYzMzYzNThhMTJmMmNkNzMxYmQ2MDgxMjBmY2EzZDc1MzkxZGIyMzNmMGMyMWZjMSIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2Eud2FzbSJdLFsibWV0aG9kIiwiREVMRVRFIl1dfQ=="
+        },
+        "method": "DELETE",
+        "path": "/a.wasm",
+        "url": "https://pod.example/a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 405
+      },
+      "name": "DELETE container",
+      "request": {
+        "body": "",
+        "headers": {
+          "authorization": "Nostr eyJjb250ZW50IjoiIiwiY3JlYXRlZF9hdCI6MTc5MDAwMDAwMCwiaWQiOiI2YjE2ZDFjMzJiMjQyN2I5ZWE3NzQxMTEzZTBjZTI3NWFjNGQyNzMzNTVhMDlmYjYzMzg2NGU0OWZkY2MwOWYzIiwia2luZCI6MjcyMzUsInB1YmtleSI6IjFiODRjNTU2N2IxMjY0NDA5OTVkM2VkNWFhYmEwNTY1ZDcxZTE4MzQ2MDQ4MTlmZjljMTdmNWU5ZDVkZDA3OGYiLCJzaWciOiIzNmI3OGQ0MzNjMTA2ZTIzYWI4ZmQwNDRhMGFiN2M3YTc5NWQyMGZhY2E4ZDZmZWYwNmZmMmU2YzBmZTgwNjIwOWYyNjlhYzlkODM5NWJiMGFjNjdkYWE1YWYxM2Y5ZDIxNDg5ZTBlM2IyNjBmMDAyNWEwYzZmMjcxZGUxYWIxNyIsInRhZ3MiOltbInUiLCJodHRwczovL3BvZC5leGFtcGxlL2MvIl0sWyJtZXRob2QiLCJERUxFVEUiXV19"
+        },
+        "method": "DELETE",
+        "path": "/c/",
+        "url": "https://pod.example/c/"
+      },
+      "stored": {
+        "children": [],
+        "kind": "container"
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 400
+      },
+      "name": "GET path with dot-dot",
+      "request": {
+        "body": "",
+        "headers": {},
+        "method": "GET",
+        "path": "/c/../a.wasm",
+        "url": "https://pod.example/c/../a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 400
+      },
+      "name": "GET path with empty segment",
+      "request": {
+        "body": "",
+        "headers": {},
+        "method": "GET",
+        "path": "/c//a.wasm",
+        "url": "https://pod.example/c//a.wasm"
+      },
+      "stored": {
+        "kind": ""
+      }
+    },
+    {
+      "expect": {
+        "body": null,
+        "op": "",
+        "status": 405
+      },
+      "name": "POST not allowed",
+      "request": {
+        "body": "eA==",
+        "headers": {},
+        "method": "POST",
+        "path": "/c/",
+        "url": "https://pod.example/c/"
+      },
+      "stored": {
+        "kind": ""
+      }
+    }
+  ],
+  "now": 1790000000,
+  "owner": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "qr-wasm-compression-bench",
+  "private": true,
+  "type": "module",
+  "description": "Measures QR-WASM envelope, compression and QR capacity on committed fixtures; exits non-zero on any failed check.",
+  "scripts": { "bench": "node bench.mjs" },
+  "dependencies": { "qrcode": "1.5.4" }
+}

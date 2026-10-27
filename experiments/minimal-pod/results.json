@@ -1,0 +1,166 @@
+{
+  "node": "v22.23.3",
+  "zlib": "1.3.2",
+  "toolchain": [
+    "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "rustc 1.101.0-nightly (7189d39d9 2026-10-22)",
+    "wasm-opt version 132",
+    "nightly: -Zbuild-std=core,alloc -Zunstable-options -Cpanic=immediate-abort"
+  ],
+  "cases": 26,
+  "bip340": 19,
+  "results": {
+    "P1-pod-k256.wasm": {
+      "pod": true,
+      "passed": true,
+      "wasm": 55556,
+      "deflate": 25453,
+      "brotli": 21481,
+      "framesDeflate": {
+        "v10": 110,
+        "v15": 54,
+        "v25": 21,
+        "v40": 9
+      },
+      "framesBrotli": {
+        "v10": 93,
+        "v15": 45,
+        "v25": 18,
+        "v40": 8
+      }
+    },
+    "P2-pod-k256-bump.wasm": {
+      "pod": true,
+      "passed": true,
+      "wasm": 48678,
+      "deflate": 22573,
+      "brotli": 18842,
+      "framesDeflate": {
+        "v10": 98,
+        "v15": 48,
+        "v25": 19,
+        "v40": 8
+      },
+      "framesBrotli": {
+        "v10": 82,
+        "v15": 40,
+        "v25": 16,
+        "v40": 7
+      }
+    },
+    "P3-pod-k256-bump-ia.wasm": {
+      "pod": true,
+      "passed": true,
+      "wasm": 46977,
+      "deflate": 21713,
+      "brotli": 18202,
+      "framesDeflate": {
+        "v10": 94,
+        "v15": 46,
+        "v25": 18,
+        "v40": 8
+      },
+      "framesBrotli": {
+        "v10": 79,
+        "v15": 38,
+        "v25": 15,
+        "v40": 7
+      }
+    },
+    "P4-pod-secp-bump.wasm": {
+      "pod": true,
+      "passed": true,
+      "wasm": 76047,
+      "deflate": 46767,
+      "brotli": 42935,
+      "framesDeflate": {
+        "v10": 202,
+        "v15": 98,
+        "v25": 38,
+        "v40": 17
+      },
+      "framesBrotli": {
+        "v10": 186,
+        "v15": 90,
+        "v25": 35,
+        "v40": 15
+      }
+    },
+    "V1-verify-k256.wasm": {
+      "pod": false,
+      "passed": true,
+      "wasm": 38815,
+      "deflate": 17799,
+      "brotli": 14793,
+      "framesDeflate": {
+        "v10": 77,
+        "v15": 38,
+        "v25": 15,
+        "v40": 7
+      },
+      "framesBrotli": {
+        "v10": 64,
+        "v15": 31,
+        "v25": 13,
+        "v40": 6
+      }
+    },
+    "V2-verify-k256-bump.wasm": {
+      "pod": false,
+      "passed": true,
+      "wasm": 33121,
+      "deflate": 15261,
+      "brotli": 12500,
+      "framesDeflate": {
+        "v10": 66,
+        "v15": 32,
+        "v25": 13,
+        "v40": 6
+      },
+      "framesBrotli": {
+        "v10": 55,
+        "v15": 27,
+        "v25": 11,
+        "v40": 5
+      }
+    },
+    "V3-verify-k256-bump-ia.wasm": {
+      "pod": false,
+      "passed": true,
+      "wasm": 30508,
+      "deflate": 13953,
+      "brotli": 11443,
+      "framesDeflate": {
+        "v10": 61,
+        "v15": 30,
+        "v25": 12,
+        "v40": 5
+      },
+      "framesBrotli": {
+        "v10": 50,
+        "v15": 24,
+        "v25": 10,
+        "v40": 4
+      }
+    },
+    "V4-verify-secp-bump.wasm": {
+      "pod": false,
+      "passed": true,
+      "wasm": 55155,
+      "deflate": 38086,
+      "brotli": 35069,
+      "framesDeflate": {
+        "v10": 165,
+        "v15": 80,
+        "v25": 31,
+        "v40": 14
+      },
+      "framesBrotli": {
+        "v10": 152,
+        "v15": 73,
+        "v25": 29,
+        "v40": 13
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+[package]
+name = "qrwasm-bench-module"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Benchmark fixture: a small dependency-free no_std WebAssembly module (base45 codec) used to measure QR-WASM compression ratios."
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[workspace]
+
+[features]
+# Pulls in core::fmt to produce a realistically sized (multi-kilobyte) fixture.
+fmt = []

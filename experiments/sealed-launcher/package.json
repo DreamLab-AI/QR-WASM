@@ -1,0 +1,17 @@
+{
+  "name": "qrw-sealed-launcher",
+  "private": true,
+  "type": "module",
+  "description": "Sealed single-QR bootstrap: launcher libraries, test signer, relay and home pod harness.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "build": "esbuild web/nip46-entry.mjs --bundle --format=esm --target=es2022 --outfile=web/vendor/nip46.mjs"
+  },
+  "dependencies": {
+    "esbuild": "0.25.10",
+    "jsqr": "1.4.0",
+    "nostr-tools": "2.25.2",
+    "qrcode": "1.5.4",
+    "ws": "8.22.0"
+  }
+}

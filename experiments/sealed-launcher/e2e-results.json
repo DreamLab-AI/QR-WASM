@@ -1,0 +1,163 @@
+{
+  "recorded": "2026-10-27",
+  "browser": "Chrome/151.0.7922.47",
+  "passed": true,
+  "appLink": {
+    "chars": 179,
+    "pointerBytes": 104
+  },
+  "blobLength": 32768,
+  "homeCodeChars": 208,
+  "steps": [
+    {
+      "name": "home code pairs with the remote signer; fragment removed from URL",
+      "ok": true,
+      "ms": 547,
+      "detail": {
+        "owner": "08e44063bbbbbeb8fe1a957260911839d1afa8b7cb7f1880fa0151310b248ca6"
+      }
+    },
+    {
+      "name": "app code: fetch from home web seed, verify, unseal, boot pod in service worker",
+      "ok": true,
+      "ms": 251,
+      "detail": {
+        "source": "home web seed",
+        "tried": [
+          "cache: absent"
+        ],
+        "appLinkChars": 179
+      }
+    },
+    {
+      "name": "signed write lands locally and at home (one NIP-98 signature via NIP-46)",
+      "ok": true,
+      "ms": 108,
+      "detail": {
+        "local": 201,
+        "home": 201,
+        "etag": "\"1145f27fe642fae18e3728410d70329e0713488f71e322c72406fb48af4addbc\""
+      }
+    },
+    {
+      "name": "local pod serves the resource and the LDP container",
+      "ok": true,
+      "ms": 14,
+      "detail": {
+        "etag": "\"1145f27fe642fae18e3728410d70329e0713488f71e322c72406fb48af4addbc\"",
+        "container": [
+          {
+            "@id": "/notes/a.txt"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unsigned and wrongly signed writes are refused by the module",
+      "ok": true,
+      "ms": 6,
+      "detail": {
+        "unsigned": 401,
+        "forged": 401
+      }
+    },
+    {
+      "name": "signer policy refuses out-of-scope requests from the browser",
+      "ok": true,
+      "ms": 127,
+      "detail": {
+        "outside": "u is not under home",
+        "note": "only kind 27235 (NIP-98) is signed"
+      }
+    },
+    {
+      "name": "service worker stopped and restarted cold: module re-hashed, data intact",
+      "ok": true,
+      "ms": 566,
+      "detail": {
+        "before": "f7fae8e1-5807-463a-afe7-3b92e1bdd436",
+        "after": "0276880c-c8be-483f-8248-e252f5e94cc9"
+      }
+    },
+    {
+      "name": "module corrupted in IndexedDB is refused on cold start, before instantiation",
+      "ok": true,
+      "ms": 569,
+      "detail": {
+        "status": 500,
+        "text": "Error: module does not match its object ID",
+        "loads": "0"
+      }
+    },
+    {
+      "name": "re-scanning the app code boots from the verified local cache (and repairs the record)",
+      "ok": true,
+      "ms": 258,
+      "detail": {
+        "source": "cache"
+      }
+    },
+    {
+      "name": "tampered app code (wrong key) fails at rule 4 and runs nothing new",
+      "ok": true,
+      "ms": 266,
+      "detail": {
+        "error": "rule 4: AES-GCM authentication failed",
+        "boots": 1,
+        "loads": 1
+      }
+    },
+    {
+      "name": "pointer to an unseeded blob fails at rule 2",
+      "ok": true,
+      "ms": 252,
+      "detail": {
+        "tried": [
+          "cache: absent",
+          "home web seed: absent"
+        ]
+      }
+    },
+    {
+      "name": "a foreign home code is shown for consent and not applied on cancel",
+      "ok": true,
+      "ms": 455,
+      "detail": {
+        "prompt": {
+          "action": "pair with home",
+          "home": "http://localhost:9/evil/",
+          "signer": "abababababababababababababababababababababababababababababababab",
+          "relays": [
+            "ws://localhost:9"
+          ],
+          "replaces": "http://localhost:8801/",
+          "warning": "replaces your current pairing and wipes this node"
+        }
+      }
+    },
+    {
+      "name": "an app code is not run until confirmed",
+      "ok": true,
+      "ms": 254,
+      "detail": {
+        "boots": 1
+      }
+    },
+    {
+      "name": "pod resources cannot be opened as top-level pages on the launcher origin",
+      "ok": true,
+      "ms": 555,
+      "detail": {
+        "text": "pod resources cannot be opened as pages"
+      }
+    },
+    {
+      "name": "the home code is single-use: a second browser cannot pair with it",
+      "ok": true,
+      "ms": 865,
+      "detail": {
+        "error": "secret invalid or already used"
+      }
+    }
+  ]
+}
