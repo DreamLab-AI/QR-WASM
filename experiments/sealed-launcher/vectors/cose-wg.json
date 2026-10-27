@@ -1,0 +1,36 @@
+{
+  "source": "https://github.com/cose-wg/Examples/tree/53c9d634333bb4f529d78f5980fffa2667ee2c12/aes-gcm-examples",
+  "note": "Extracted fields of aes-gcm-enc-01/03/04.json; strictProfile = whether the launcher A256GCM profile accepts the encoding.",
+  "cases": [
+    {
+      "title": "AES-GCM-ENC-01: Encryption example for spec - implicit",
+      "alg": "A128GCM",
+      "keyB64url": "hJtXIZ2uSN5kbQfbtTNWbg",
+      "plaintext": "This is the content.",
+      "aadHex": "8368456E63727970743043A1010140",
+      "cbor": "D08343A10101A1054C02D1F7E6F26C43D4868D87CE582460973A94BB2898009EE52ECFD9AB1DD25867374B162E2C03568B41F57C3CC16F9166250A",
+      "fail": false,
+      "strictProfile": false
+    },
+    {
+      "title": "AES-GCM-ENC-03: Encryption example for spec - implicit",
+      "alg": "A256GCM",
+      "keyB64url": "Dx4tPEtaaXiHlqW0w9Lh8B8uPUxbanmIl6a1xNPi8QA",
+      "plaintext": "This is the content.",
+      "aadHex": "8368456E63727970743043A1010340",
+      "cbor": "D08343A10103A1054C02D1F7E6F26C43D4868D87CE58249D64A5A59A3B04867DCCF6B8EF82F7D1A3B25EF84ECA2BC5D7593A96E943859A9CC24AD3",
+      "fail": false,
+      "strictProfile": true
+    },
+    {
+      "title": "AES-GCM-ENC-04: Encryption example for spec - implicit - Fail the tag",
+      "alg": "A128GCM",
+      "keyB64url": "hJtXIZ2uSN5kbQfbtTNWbg",
+      "plaintext": "This is the content.",
+      "aadHex": "8368456E63727970743043A1010140",
+      "cbor": "D08343A10101A1054C02D1F7E6F26C43D4868D87CE582460973A94BB2898009EE52ECFD9AB1DD25867374B162E2C03568B41F57C3CC16F9166250B",
+      "fail": true,
+      "strictProfile": false
+    }
+  ]
+}

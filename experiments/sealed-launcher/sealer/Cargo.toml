@@ -1,0 +1,19 @@
+[package]
+name = "qrw-seal"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Seals a WebAssembly module as a QR-WASM sealed blob (COSE_Encrypt0, A256GCM) and prints its QS pointer."
+
+[dependencies]
+aes-gcm = "0.10"
+coset = "0.3"
+flate2 = "1"
+sha1 = "0.10"
+sha2 = "0.10"
+hex = "0.4"
+serde_json = "1"
+
+[dev-dependencies]
+
+[workspace]
