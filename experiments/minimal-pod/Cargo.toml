@@ -14,21 +14,25 @@ default = ["k256", "pod"]
 k256 = ["dep:k256"]
 libsecp256k1 = ["dep:secp256k1"]
 # The LDP + NIP-98 pod logic; without it only `schnorr_verify` is exported.
-pod = ["dep:serde_json", "dep:base64", "dep:hex", "dep:sha2"]
-# Per-request bump allocator (wasm32 only).
+pod = ["dep:hex", "dep:sha2"]
+# Per-request bump allocator instead of dlmalloc (wasm32 only).
 bump = []
 
 [dependencies]
 k256 = { version = "0.13", default-features = false, features = ["schnorr"], optional = true }
 secp256k1 = { version = "0.31", default-features = false, features = ["alloc", "lowmemory"], optional = true }
 sha2 = { version = "0.10", default-features = false, optional = true }
-serde_json = { version = "1", default-features = false, features = ["alloc"], optional = true }
-base64 = { version = "0.22", default-features = false, features = ["alloc"], optional = true }
 hex = { version = "0.4", default-features = false, features = ["alloc"], optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+dlmalloc = { version = "0.2", features = ["global"] }
 
 [dev-dependencies]
 k256 = { version = "0.13", features = ["schnorr"] }
 serde_json = "1"
+base64 = "0.22"
+sha2 = "0.10"
+hex = "0.4"
 
 [profile.release]
 opt-level = "z"

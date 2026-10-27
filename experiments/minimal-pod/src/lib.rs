@@ -7,13 +7,22 @@
 //! in the shell (IndexedDB) while every policy decision — path rules, LDP status
 //! codes, NIP-98 verification, the owner check — stays inside the hashed module.
 //!
-//! Wire format, both directions: a sequence of fields, each a big-endian `u32`
-//! length followed by that many bytes.
+//! The shell does what browsers do natively and the module cannot do more
+//! cheaply: it base64-decodes and `JSON.parse`s the NIP-98 `Authorization`
+//! header and passes the event's fields. The module rebuilds the NIP-01
+//! canonical serialisation from those fields and verifies the signature over
+//! it, so every field it authorises on is bound to the signature: a shell that
+//! alters one is rejected, not trusted.
 //!
-//! Request fields: method, absolute URL, path, Authorization, Content-Type,
-//! If-None-Match, If-Match, now (decimal Unix seconds), body, stored kind
-//! (`""`, `"resource"` or `"container"`), stored Content-Type, stored body or
-//! newline-separated child names.
+//! Wire format, both directions: a sequence of fields, each a big-endian `u32`
+//! length followed by that many bytes. Event tags are nested: one field holding
+//! a sequence of tags, each itself a sequence of strings.
+//!
+//! Request fields: method, absolute URL, path, Content-Type, If-None-Match,
+//! If-Match, now (decimal Unix seconds), body, stored kind (`""`, `"resource"`
+//! or `"container"`), stored Content-Type, stored body or newline-separated
+//! child names, then the NIP-98 event (all empty when there is none): id hex,
+//! pubkey hex, created_at, kind, tags, content, sig hex.
 //!
 //! Response fields: status (decimal), headers (`Name: value\n`…), body, write
 //! op (`""`, `"put"` or `"delete"`), op path, op Content-Type, op body.
@@ -21,15 +30,22 @@
 //! Cargo features pick the Schnorr backend (`k256` or `libsecp256k1`), whether
 //! the pod logic is included (`pod`; without it only `schnorr_verify` is
 //! exported), and `bump`, a per-request bump allocator.
+#![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
 use alloc::vec::Vec;
 #[cfg(feature = "pod")]
-use alloc::{format, string::String};
+use alloc::string::String;
 
 #[cfg(all(feature = "k256", feature = "libsecp256k1"))]
 compile_error!("choose one Schnorr backend");
+
+#[cfg(all(target_arch = "wasm32", not(test)))]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
 
 /// Verifies a BIP-340 signature over an arbitrary-length message.
 pub fn verify_bip340(pubkey: &[u8; 32], msg: &[u8], sig: &[u8; 64]) -> bool {
@@ -57,9 +73,9 @@ pub fn read_fields(mut buf: &[u8]) -> Option<Vec<&[u8]>> {
     let mut out = Vec::new();
     while !buf.is_empty() {
         let len = u32::from_be_bytes(buf.get(..4)?.try_into().ok()?) as usize;
-        let field = buf.get(4..4 + len)?;
-        out.push(field);
-        buf = &buf[4 + len..];
+        let end = len.checked_add(4)?;
+        out.push(buf.get(4..end)?);
+        buf = &buf[end..];
     }
     Some(out)
 }
@@ -79,7 +95,6 @@ pub fn write_fields(fields: &[&[u8]]) -> Vec<u8> {
 #[cfg(feature = "pod")]
 pub mod pod {
     use super::*;
-    use serde_json::{json, Value};
     use sha2::{Digest, Sha256};
 
     /// NIP-98 HTTP auth event kind.
@@ -102,18 +117,30 @@ pub mod pod {
         Container { children: Vec<&'a str> },
     }
 
+    /// A NIP-98 event as the shell parsed it; nothing here is trusted until
+    /// [`nip98`] has verified the signature over these exact fields.
+    pub struct Event<'a> {
+        pub id: &'a str,
+        pub pubkey: &'a str,
+        pub created_at: u64,
+        pub kind: u64,
+        pub tags: Vec<Vec<&'a str>>,
+        pub content: &'a str,
+        pub sig: &'a str,
+    }
+
     /// One HTTP request plus the stored state it applies to.
     pub struct Request<'a> {
         pub method: &'a str,
         pub url: &'a str,
         pub path: &'a str,
-        pub authorization: &'a str,
         pub content_type: &'a str,
         pub if_none_match: &'a str,
         pub if_match: &'a str,
         pub now: u64,
         pub body: &'a [u8],
         pub stored: Stored<'a>,
+        pub auth: Option<Event<'a>>,
     }
 
     #[derive(Debug)]
@@ -128,67 +155,152 @@ pub mod pod {
         Response { status, headers: Vec::new(), body: Vec::new(), op: Op::None }
     }
 
-    fn etag(body: &[u8]) -> String {
-        format!("\"{}\"", hex::encode(Sha256::digest(body)))
+    fn sha256_hex(bytes: &[u8]) -> String {
+        hex::encode(Sha256::digest(bytes))
     }
 
-    /// Absolute, normalised, printable ASCII, at most 1 KiB.
+    fn etag(body: &[u8]) -> String {
+        let mut out = String::from("\"");
+        out.push_str(&sha256_hex(body));
+        out.push('"');
+        out
+    }
+
+    /// Decimal digits of `n`, without `core::fmt` (which would add kilobytes).
+    pub fn push_u64(out: &mut String, mut n: u64) {
+        let mut digits = [0u8; 20];
+        let mut i = digits.len();
+        loop {
+            i -= 1;
+            digits[i] = b'0' + (n % 10) as u8;
+            n /= 10;
+            if n == 0 {
+                break;
+            }
+        }
+        digits[i..].iter().for_each(|&d| out.push(d as char));
+    }
+
+    fn join(a: &str, b: &str) -> String {
+        let mut out = String::with_capacity(a.len() + b.len());
+        out.push_str(a);
+        out.push_str(b);
+        out
+    }
+
+    /// Absolute, normalised, printable ASCII without `\`, at most 1 KiB.
     pub fn valid_path(path: &str) -> bool {
+        let Some(rest) = path.strip_prefix('/') else { return false };
+        let segments: Vec<&str> = rest.split('/').collect();
         path.len() <= 1024
-            && path.starts_with('/')
             && path.bytes().all(|b| (0x21..0x7f).contains(&b) && b != b'\\')
-            && !path[1..].split('/').enumerate().any(|(i, s)| {
-                s == "." || s == ".." || (s.is_empty() && i + 1 != path[1..].split('/').count())
-            })
+            && segments.iter().enumerate().all(|(i, s)| *s != "." && *s != ".." && (!s.is_empty() || i + 1 == segments.len()))
     }
 
     fn header_safe(v: &str) -> bool {
         v.len() <= 256 && v.bytes().all(|b| (0x20..0x7f).contains(&b))
     }
 
-    /// Verifies a NIP-98 `Authorization: Nostr <base64 event>` header against
-    /// this request and returns the signer's x-only public key.
+    /// Writes `s` as a JSON string under NIP-01's rule: exactly `\n` `"` `\\`
+    /// `\r` `\t` `\b` `\f` are escaped and every other character is verbatim.
+    /// serde_json and `JSON.stringify` instead write other C0 controls as
+    /// `\u00XX`; an event signed that way over such a character fails here.
+    pub fn push_nip01_string(out: &mut String, s: &str) {
+        out.push('"');
+        for c in s.chars() {
+            match c {
+                '\n' => out.push_str("\\n"),
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                '\u{8}' => out.push_str("\\b"),
+                '\u{c}' => out.push_str("\\f"),
+                c => out.push(c),
+            }
+        }
+        out.push('"');
+    }
+
+    /// NIP-01 canonical serialisation `[0,pubkey,created_at,kind,tags,content]`.
+    pub fn canonical(ev: &Event) -> String {
+        let mut out = String::from("[0,");
+        push_nip01_string(&mut out, ev.pubkey);
+        out.push(',');
+        push_u64(&mut out, ev.created_at);
+        out.push(',');
+        push_u64(&mut out, ev.kind);
+        out.push_str(",[");
+        for (i, tag) in ev.tags.iter().enumerate() {
+            out.push_str(if i == 0 { "[" } else { ",[" });
+            for (j, v) in tag.iter().enumerate() {
+                if j > 0 {
+                    out.push(',');
+                }
+                push_nip01_string(&mut out, v);
+            }
+            out.push(']');
+        }
+        out.push_str("],");
+        push_nip01_string(&mut out, ev.content);
+        out.push(']');
+        out
+    }
+
+    /// Verifies a NIP-98 event against this request and returns the signer's
+    /// x-only public key.
     pub fn nip98(req: &Request) -> Result<[u8; 32], &'static str> {
-        use base64::Engine;
-        let b64 = req.authorization.strip_prefix("Nostr ").ok_or("scheme")?;
-        let raw = base64::engine::general_purpose::STANDARD.decode(b64.trim()).map_err(|_| "base64")?;
-        let ev: Value = serde_json::from_slice(&raw).map_err(|_| "json")?;
-        let kind = ev["kind"].as_u64().ok_or("kind")?;
-        let created_at = ev["created_at"].as_u64().ok_or("created_at")?;
-        let (pubkey, content, tags) = (ev["pubkey"].as_str().ok_or("pubkey")?, ev["content"].as_str().ok_or("content")?, &ev["tags"]);
-        if kind != KIND_HTTP_AUTH {
+        let ev = req.auth.as_ref().ok_or("missing")?;
+        if ev.kind != KIND_HTTP_AUTH {
             return Err("kind");
         }
-        if created_at.abs_diff(req.now) > MAX_SKEW {
+        if ev.created_at.abs_diff(req.now) > MAX_SKEW {
             return Err("stale");
         }
-        let tag = |name: &str| {
-            tags.as_array()?.iter().find_map(|t| match t.as_array()?.as_slice() {
-                [Value::String(n), Value::String(v), ..] if n == name => Some(v.as_str()),
-                _ => None,
-            })
-        };
+        let tag = |name: &str| ev.tags.iter().find(|t| t.first() == Some(&name)).and_then(|t| t.get(1).copied());
         if tag("u") != Some(req.url) || tag("method") != Some(req.method) {
             return Err("binding");
         }
-        if !req.body.is_empty() && tag("payload") != Some(hex::encode(Sha256::digest(req.body)).as_str()) {
+        if !req.body.is_empty() && tag("payload") != Some(sha256_hex(req.body).as_str()) {
             return Err("payload");
         }
-        // NIP-01 id over the canonical serialisation, as solid-pod-rs-nostr computes it.
-        let canonical = serde_json::to_string(&json!([0, pubkey, created_at, kind, tags, content])).map_err(|_| "json")?;
-        let id = Sha256::digest(canonical.as_bytes());
-        let mut claimed = [0u8; 32];
-        hex::decode_to_slice(ev["id"].as_str().ok_or("id")?, &mut claimed).map_err(|_| "id")?;
+        let id = Sha256::digest(canonical(ev).as_bytes());
+        let (mut claimed, mut pk, mut sig) = ([0u8; 32], [0u8; 32], [0u8; 64]);
+        hex::decode_to_slice(ev.id, &mut claimed).map_err(|_| "id")?;
+        hex::decode_to_slice(ev.pubkey, &mut pk).map_err(|_| "pubkey")?;
+        hex::decode_to_slice(ev.sig, &mut sig).map_err(|_| "sig")?;
         if claimed != id[..] {
             return Err("id");
         }
-        let (mut pk, mut sig) = ([0u8; 32], [0u8; 64]);
-        hex::decode_to_slice(pubkey, &mut pk).map_err(|_| "pubkey")?;
-        hex::decode_to_slice(ev["sig"].as_str().ok_or("sig")?, &mut sig).map_err(|_| "sig")?;
         if !verify_bip340(&pk, &id, &sig) {
             return Err("signature");
         }
         Ok(pk)
+    }
+
+    fn push_json_string(out: &mut String, s: &str) {
+        // Paths reaching here passed `valid_path`: printable ASCII, no `\`.
+        out.push('"');
+        for c in s.chars() {
+            if c == '"' {
+                out.push('\\');
+            }
+            out.push(c);
+        }
+        out.push('"');
+    }
+
+    fn listing(path: &str, children: &[&str]) -> Vec<u8> {
+        let mut doc = String::from(r#"{"@context":{"ldp":"http://www.w3.org/ns/ldp#"},"@id":"#);
+        push_json_string(&mut doc, path);
+        doc.push_str(r#","@type":["ldp:Container","ldp:BasicContainer"],"ldp:contains":["#);
+        for (i, c) in children.iter().enumerate() {
+            doc.push_str(if i == 0 { r#"{"@id":"# } else { r#",{"@id":"# });
+            push_json_string(&mut doc, &join(path, c));
+            doc.push('}');
+        }
+        doc.push_str("]}");
+        doc.into_bytes()
     }
 
     /// The whole pod: one request in, one response and at most one write out.
@@ -215,15 +327,11 @@ pub mod pod {
                         r
                     }
                     (Stored::Container { children }, true) => {
-                        let contains: Vec<Value> = children.iter().map(|c| json!({"@id": format!("{}{}", req.path, c)})).collect();
-                        let doc = json!({
-                            "@context": {"ldp": "http://www.w3.org/ns/ldp#"},
-                            "@id": req.path,
-                            "@type": ["ldp:Container", "ldp:BasicContainer"],
-                            "ldp:contains": contains,
-                        });
+                        if children.iter().any(|c| !valid_path(&join(req.path, c))) {
+                            return status(500);
+                        }
                         let mut r = status(200);
-                        r.body = serde_json::to_vec(&doc).unwrap_or_default();
+                        r.body = listing(req.path, children);
                         r.headers.push(("Content-Type", String::from("application/ld+json")));
                         r.headers.push(("ETag", etag(&r.body)));
                         r.headers.push(("Link", String::from("<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"")));
@@ -285,23 +393,39 @@ pub mod pod {
         }
     }
 
+    fn parse_request(wire: &[u8]) -> Option<Request<'_>> {
+        let f = read_fields(wire)?;
+        if f.len() != 18 {
+            return None;
+        }
+        let s = |i: usize| core::str::from_utf8(f[i]).ok();
+        let stored = match s(8)? {
+            "" => Stored::Absent,
+            "resource" => Stored::Resource { content_type: s(9)?, body: f[10] },
+            "container" => Stored::Container { children: s(10)?.split('\n').filter(|c| !c.is_empty()).collect() },
+            _ => return None,
+        };
+        let auth = if f[11].is_empty() {
+            None
+        } else {
+            let mut tags = Vec::new();
+            for tag in read_fields(f[15])? {
+                tags.push(read_fields(tag)?.into_iter().map(|v| core::str::from_utf8(v).ok()).collect::<Option<Vec<_>>>()?);
+            }
+            Some(Event {
+                id: s(11)?, pubkey: s(12)?, created_at: s(13)?.parse().ok()?, kind: s(14)?.parse().ok()?,
+                tags, content: s(16)?, sig: s(17)?,
+            })
+        };
+        Some(Request {
+            method: s(0)?, url: s(1)?, path: s(2)?, content_type: s(3)?, if_none_match: s(4)?, if_match: s(5)?,
+            now: s(6)?.parse().ok()?, body: f[7], stored, auth,
+        })
+    }
+
     /// Decodes a wire request, runs [`handle`], and encodes the response.
     pub fn handle_wire(owner: &[u8; 32], wire: &[u8]) -> Vec<u8> {
-        let parsed = read_fields(wire).filter(|f| f.len() == 12).and_then(|f| {
-            let s = |i: usize| core::str::from_utf8(f[i]).ok();
-            let stored = match s(9)? {
-                "" => Stored::Absent,
-                "resource" => Stored::Resource { content_type: s(10)?, body: f[11] },
-                "container" => Stored::Container { children: s(11)?.split('\n').filter(|c| !c.is_empty()).collect() },
-                _ => return None,
-            };
-            let req = Request {
-                method: s(0)?, url: s(1)?, path: s(2)?, authorization: s(3)?, content_type: s(4)?,
-                if_none_match: s(5)?, if_match: s(6)?, now: s(7)?.parse().ok()?, body: f[8], stored,
-            };
-            Some(handle(owner, &req))
-        });
-        let res = parsed.unwrap_or_else(|| status(400));
+        let res = parse_request(wire).map(|req| handle(owner, &req)).unwrap_or_else(|| status(400));
         let mut headers = String::new();
         for (k, v) in &res.headers {
             headers.push_str(k);
@@ -309,7 +433,8 @@ pub mod pod {
             headers.push_str(v);
             headers.push('\n');
         }
-        let code = format!("{}", res.status);
+        let mut code = String::new();
+        push_u64(&mut code, res.status.into());
         let (op, path, ctype, body): (&[u8], &[u8], &[u8], &[u8]) = match &res.op {
             Op::None => (b"", b"", b"", b""),
             Op::Put { path, content_type, body } => (b"put", path.as_bytes(), content_type.as_bytes(), body),
@@ -321,7 +446,11 @@ pub mod pod {
 
 // --- WebAssembly exports ------------------------------------------------------
 
-#[cfg(feature = "bump")]
+#[cfg(all(target_arch = "wasm32", not(feature = "bump")))]
+#[global_allocator]
+static ALLOC: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
+
+#[cfg(all(target_arch = "wasm32", feature = "bump"))]
 mod bump {
     //! Per-request bump allocator: `free` is a no-op and [`reset`] reclaims everything.
     //! Sound only because the shell calls `reset` before each request and nothing
@@ -342,10 +471,7 @@ mod bump {
                 NEXT = core::ptr::addr_of!(__heap_base) as usize;
             }
             let start = (NEXT + layout.align() - 1) & !(layout.align() - 1);
-            let end = match start.checked_add(layout.size()) {
-                Some(e) => e,
-                None => return core::ptr::null_mut(),
-            };
+            let Some(end) = start.checked_add(layout.size()) else { return core::ptr::null_mut() };
             let have = memory_size(0) * 65536;
             if end > have && memory_grow(0, (end - have).div_ceil(65536)) == usize::MAX {
                 return core::ptr::null_mut();
@@ -359,11 +485,10 @@ mod bump {
     pub fn reset() {
         unsafe { NEXT = 0 }
     }
-}
 
-#[cfg(feature = "bump")]
-#[global_allocator]
-static ALLOC: bump::Bump = bump::Bump;
+    #[global_allocator]
+    static ALLOC: Bump = Bump;
+}
 
 #[cfg(target_arch = "wasm32")]
 mod exports {
