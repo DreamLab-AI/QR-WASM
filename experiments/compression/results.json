@@ -39,6 +39,14 @@
       "alnum": 4296
     }
   },
+  "url43FrameCapacity": {
+    "10": 243,
+    "15": 485,
+    "20": 812,
+    "25": 1215,
+    "30": 1660,
+    "40": 2844
+  },
   "compression": {
     "provider": {
       "raw": 43,
@@ -104,7 +112,13 @@
       "url@v20": 4,
       "url@v25": 3,
       "url@v30": 2,
-      "url@v40": 1
+      "url@v40": 1,
+      "url43@v10": 11,
+      "url43@v15": 5,
+      "url43@v20": 3,
+      "url43@v25": 2,
+      "url43@v30": 2,
+      "url43@v40": 1
     },
     "provider": {
       "envelope": 118,
@@ -125,7 +139,13 @@
       "url@v20": 1,
       "url@v25": 1,
       "url@v30": 1,
-      "url@v40": 1
+      "url@v40": 1,
+      "url43@v10": 1,
+      "url43@v15": 1,
+      "url43@v20": 1,
+      "url43@v25": 1,
+      "url43@v30": 1,
+      "url43@v40": 1
     },
     "consumer": {
       "envelope": 137,
@@ -146,7 +166,13 @@
       "url@v20": 1,
       "url@v25": 1,
       "url@v30": 1,
-      "url@v40": 1
+      "url@v40": 1,
+      "url43@v10": 1,
+      "url43@v15": 1,
+      "url43@v20": 1,
+      "url43@v25": 1,
+      "url43@v30": 1,
+      "url43@v40": 1
     },
     "base45-oz": {
       "envelope": 630,
@@ -167,7 +193,13 @@
       "url@v20": 2,
       "url@v25": 1,
       "url@v30": 1,
-      "url@v40": 1
+      "url@v40": 1,
+      "url43@v10": 4,
+      "url43@v15": 2,
+      "url43@v20": 1,
+      "url43@v25": 1,
+      "url43@v30": 1,
+      "url43@v40": 1
     },
     "base45-oz-wasmopt": {
       "envelope": 578,
@@ -188,7 +220,13 @@
       "url@v20": 1,
       "url@v25": 1,
       "url@v30": 1,
-      "url@v40": 1
+      "url@v40": 1,
+      "url43@v10": 3,
+      "url43@v15": 2,
+      "url43@v20": 1,
+      "url43@v25": 1,
+      "url43@v30": 1,
+      "url43@v40": 1
     },
     "base45-fmt-oz": {
       "envelope": 10866,
@@ -209,7 +247,13 @@
       "url@v20": 19,
       "url@v25": 13,
       "url@v30": 9,
-      "url@v40": 6
+      "url@v40": 6,
+      "url43@v10": 54,
+      "url43@v15": 25,
+      "url43@v20": 15,
+      "url43@v25": 10,
+      "url43@v30": 7,
+      "url43@v40": 4
     },
     "base45-fmt-oz-wasmopt": {
       "envelope": 10421,
@@ -230,7 +274,13 @@
       "url@v20": 18,
       "url@v25": 12,
       "url@v30": 9,
-      "url@v40": 5
+      "url@v40": 5,
+      "url43@v10": 52,
+      "url43@v15": 24,
+      "url43@v20": 14,
+      "url43@v25": 9,
+      "url43@v30": 7,
+      "url43@v40": 4
     }
   },
   "provenance": {
@@ -247,6 +297,10 @@
     "base45-fmt-oz-wasmopt": "d8ac49f913b7f9bcfaba1e62046366e8ba96d722ba9931e9a9d030e83c1e8e7c"
   },
   "checks": [
+    {
+      "name": "base43 round-trips, rejects overflow, and stays in the fragment-safe alphabet",
+      "ok": true
+    },
     {
       "name": "QR capacity probe matches cited ISO/IEC 18004 table (level L)",
       "ok": true
@@ -392,6 +446,30 @@
       "ok": true
     },
     {
+      "name": "incompressible-2048 url43 frames encode at v10-L",
+      "ok": true
+    },
+    {
+      "name": "incompressible-2048 url43 frames encode at v15-L",
+      "ok": true
+    },
+    {
+      "name": "incompressible-2048 url43 frames encode at v20-L",
+      "ok": true
+    },
+    {
+      "name": "incompressible-2048 url43 frames encode at v25-L",
+      "ok": true
+    },
+    {
+      "name": "incompressible-2048 url43 frames encode at v30-L",
+      "ok": true
+    },
+    {
+      "name": "incompressible-2048 url43 frames encode at v40-L",
+      "ok": true
+    },
+    {
       "name": "base45-fmt-oz-wasmopt binary frames encode at v10-L",
       "ok": true
     },
@@ -461,6 +539,30 @@
     },
     {
       "name": "base45-fmt-oz-wasmopt url frames encode at v40-L",
+      "ok": true
+    },
+    {
+      "name": "base45-fmt-oz-wasmopt url43 frames encode at v10-L",
+      "ok": true
+    },
+    {
+      "name": "base45-fmt-oz-wasmopt url43 frames encode at v15-L",
+      "ok": true
+    },
+    {
+      "name": "base45-fmt-oz-wasmopt url43 frames encode at v20-L",
+      "ok": true
+    },
+    {
+      "name": "base45-fmt-oz-wasmopt url43 frames encode at v25-L",
+      "ok": true
+    },
+    {
+      "name": "base45-fmt-oz-wasmopt url43 frames encode at v30-L",
+      "ok": true
+    },
+    {
+      "name": "base45-fmt-oz-wasmopt url43 frames encode at v40-L",
       "ok": true
     },
     {

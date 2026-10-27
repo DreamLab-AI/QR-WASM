@@ -60,6 +60,37 @@ function base45Decode(str) {
   }
   return Buffer.from(out);
 }
+// Radix-43: the QR alphanumeric characters that a URL fragment keeps verbatim
+// (all but space and %; WHATWG URL fragment percent-encode set). 43³ ≥ 2¹⁶, so
+// 2 bytes still fit in 3 characters, the density of base45.
+const B43 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$*+-./:';
+function base43Encode(bytes) {
+  let out = '';
+  for (let i = 0; i + 1 < bytes.length; i += 2) {
+    let n = bytes[i] * 256 + bytes[i + 1];
+    for (let k = 0; k < 3; k++) { out += B43[n % 43]; n = Math.floor(n / 43); }
+  }
+  if (bytes.length % 2) { const n = bytes[bytes.length - 1]; out += B43[n % 43] + B43[Math.floor(n / 43)]; }
+  return out;
+}
+function base43Decode(str) {
+  if (str.length % 3 === 1) throw new Error('base43: bad length');
+  const out = [];
+  for (let i = 0; i < str.length; i += 3) {
+    const chunk = str.slice(i, i + 3);
+    let n = 0, scale = 1;
+    for (const c of chunk) {
+      const v = B43.indexOf(c);
+      if (v < 0) throw new Error('base43: bad character');
+      n += v * scale; scale *= 43;
+    }
+    if (chunk.length === 3) { if (n > 0xffff) throw new Error('base43: overflow'); out.push(n >> 8, n & 0xff); }
+    else { if (n > 0xff) throw new Error('base43: overflow'); out.push(n); }
+  }
+  return Buffer.from(out);
+}
+const URL43_ORIGIN = 'HTTPS://QR.EXAMPLE/'; // scheme and host are case-insensitive: alphanumeric mode
+const URL43_PATH = 'V1/';
 const deflateRaw = (b, dictionary) => zlib.deflateRawSync(b, {level: 9, ...(dictionary && {dictionary})});
 const brotli = b => zlib.brotliCompressSync(b, {params: {
   [zlib.constants.BROTLI_PARAM_QUALITY]: 11,
@@ -106,6 +137,11 @@ const transports = {
     frameBytes: c => Math.floor(c / 3) * 2 + (c % 3 === 2 ? 1 : 0)},
   url: {capacity: v => cap[v].byte, wrap: f => [{data: Buffer.from(URL_PREFIX + f.toString('base64url')), mode: 'byte'}],
     frameBytes: c => Math.floor((c - URL_PREFIX.length) * 3 / 4)},
+  // Three segments: alphanumeric origin, byte-mode '#', alphanumeric radix-43 payload.
+  // Segment headers make the capacity awkward to derive, so it is probed (below).
+  url43: {capacity: v => url43Cap[v], wrap: f => [
+    {data: URL43_ORIGIN, mode: 'alphanumeric'}, {data: Buffer.from('#'), mode: 'byte'},
+    {data: URL43_PATH + base43Encode(f), mode: 'alphanumeric'}], frameBytes: c => c},
 };
 function frameObject(env, transport, version) {
   const per = transports[transport].frameBytes(transports[transport].capacity(version)) - FRAME_HEADER;
@@ -149,6 +185,19 @@ for (const v of VERSIONS) cap[v] = {
   byte: probe(v, n => [{data: Buffer.alloc(n, 0xa5), mode: 'byte'}]),
   alnum: probe(v, n => [{data: 'A'.repeat(n), mode: 'alphanumeric'}]),
 };
+// Largest frame (bytes) whose url43 symbol encodes at each version.
+const url43Cap = {};
+for (const v of VERSIONS) url43Cap[v] = probe(v, n => transports.url43.wrap(Buffer.alloc(n, 0xff)));
+check('base43 round-trips, rejects overflow, and stays in the fragment-safe alphabet', () => {
+  for (const n of [0, 1, 2, 3, 255, 256]) {
+    const b = Buffer.from(Array.from({length: n}, (_, i) => (i * 97 + 13) & 0xff));
+    const s = base43Encode(b);
+    assert.ok([...s].every(c => B43.includes(c) && c !== ' ' && c !== '%'));
+    assert.ok(base43Decode(s).equals(b));
+  }
+  assert.equal(base43Encode(Buffer.from([0xff, 0xff])), '3JZ'); // 65535 = 3 + 19·43 + 35·43²
+  assert.throws(() => base43Decode('::::'.slice(0, 3)), /overflow/); // 42·(1+43+1849) > 65535
+});
 check('QR capacity probe matches cited ISO/IEC 18004 table (level L)', () => {
   for (const v of VERSIONS) assert.deepEqual([cap[v].alnum, cap[v].byte], CITED_L[v], `version ${v}`);
 });
@@ -267,7 +316,7 @@ check('reassembly rejects a frame from another object and missing frames', () =>
 });
 
 // Spec §9 acceptance criteria: incompressible 2 KiB module with one dependency.
-const AC = {'binary@v15': 5, 'binary@v25': 2, 'base45@v25': 2, 'url@v25': 3, 'binary@v40': 1};
+const AC = {'binary@v15': 5, 'binary@v25': 2, 'base45@v25': 2, 'url@v25': 3, 'binary@v40': 1, 'url43@v10': 11, 'url43@v25': 2};
 check('spec §9 frame-count acceptance criteria hold', () => {
   for (const [k, n] of Object.entries(AC)) assert.equal(frameTable['incompressible-2048'][k], n, k);
 });
@@ -293,7 +342,7 @@ const results = {
   node: process.version, zlib: process.versions.zlib, brotli: process.versions.brotli,
   toolchain: readFileSync(`${here}fixtures/TOOLCHAIN`, 'utf8').trim().split('\n'),
   constants: {ENVELOPE_FIXED, DEP_BYTES, FRAME_HEADER, URL_PREFIX, MAX_UNCOMPRESSED},
-  capacityL: cap, compression, frames: frameTable, provenance,
+  capacityL: cap, url43FrameCapacity: url43Cap, compression, frames: frameTable, provenance,
   fixtureSha256: Object.fromEntries(Object.entries(fixtures).map(([k, b]) => [k, sha(b).toString('hex')])),
   checks,
 };

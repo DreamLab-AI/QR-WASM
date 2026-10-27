@@ -54,7 +54,7 @@ The encoder compresses with every codec it is allowed to emit and keeps the smal
 ### 2.2 Why deflate-raw is mandatory and brotli optional
 
 - Every v1 decoder must support `none` and `deflate-raw`.
-- Brotli is about 2% smaller on the 775-byte module and 11.5% smaller on the 19.8 KB one. That saves one frame out of nine at v25 (§4), so it is worth keeping. But the [Compression Standard](https://compression.spec.whatwg.org/) only added `"brotli"` to `CompressionFormat` recently, and it is not confirmed which browsers ship it (§10).
+- Brotli is about 2% smaller on the 775-byte module and 11.5% smaller on the 19.8 KB one. That saves one frame out of nine at v25 (§4), so it is worth keeping. But although the [Compression Standard](https://compression.spec.whatwg.org/) now lists `"brotli"`, Chrome 151 rejects `new DecompressionStream('brotli')` with a TypeError (`experiments/minimal-pod/browser-results.json`). A decoder would have to ship brotli itself, which costs more than the frame it saves.
 - An encoder may emit `0x02` only when it knows the receiver's decoder supports it, for example because a cached runtime declares it. A decoder that sees an unsupported codec rejects the object and does not guess.
 
 ### 2.3 Decoder rules
@@ -106,12 +106,25 @@ The order frames arrive in does not matter.
 | `binary` (preferred) | byte | frame bytes as they are | 1,273 − 39 = 1,234 |
 | `base45` | alphanumeric | RFC 9285 base45 of the frame | ⌊1,853 / 3⌋·2 + 1 − 39 = 1,196 |
 | `url` | byte | `https://<origin>/#v1/` + base64url (RFC 4648 §5) of the frame | ⌊(1,273 − 23)·3/4⌋ − 39 = 898 |
+| `url43` (preferred for camera links) | alphanumeric + byte + alphanumeric | `HTTPS://<ORIGIN>/` · `#` · `V1/` + radix-43 of the frame | 1,215 − 39 = 1,176 (probed) |
 
 `binary` packs the most per symbol. The open question is whether browser and phone scanners return its bytes intact (§10).
 
 `base45` exists for scanners that only return text. It takes the same number of frames as `binary`, or one more, for every fixture measured.
 
-`url` is what a phone camera opens with no app installed, which is how TLO works. At v10 it needs about 1.5–1.6 times as many frames as `binary` (15 against 10 for the 2 KiB case, 71 against 45 for the 19.8 KB module). Base45 cannot be used inside a URL: `#` is not in the QR alphanumeric set, and base45's space and `%` are mangled by URL percent-decoding. So a URL symbol is always in byte mode.
+`url` is what a phone camera opens with no app installed, which is how TLO works. At v10 it needs about 1.5–1.6 times as many frames as `binary` (15 against 10 for the 2 KiB case, 71 against 45 for the 19.8 KB module). Base45 cannot be used inside a URL: `#` is not in the QR alphanumeric set, and base45's space and `%` are mangled by URL percent-decoding.
+
+`url43` gets around this with three QR segments:
+
+1. an alphanumeric segment for the upper-case origin (scheme and host are case-insensitive);
+2. a one-character byte segment for `#`;
+3. an alphanumeric segment holding `V1/` and the frame in *radix 43*.
+
+Radix 43 is base45 without space and `%`. Its alphabet is `0-9 A-Z $ * + - . / :`, which the [WHATWG URL](https://url.spec.whatwg.org/) fragment percent-encode set leaves untouched. Two bytes become three characters (43³ ≥ 2¹⁶, and a lone final byte takes two), the same density as base45.
+
+The shell reads the payload from `location.hash`. It must never parse the fragment as form data, where `+` would become a space. Chrome 151 returned all 43 characters unchanged (`experiments/minimal-pod/browser-results.json`).
+
+`url43` needs the same number of frames as `binary` at v25 and v40, and one to seven more at v10 and v15.
 
 Frames needed, with one dependency (from `results.json`):
 
@@ -120,6 +133,8 @@ Frames needed, with one dependency (from `results.json`):
 | incompressible 2,048 B | 2,123 | 5 / 2 / 1 | 5 / 2 / 1 | 7 / 3 / 1 |
 | `base45-oz-wasmopt` | 578 | 2 / 1 / 1 | 2 / 1 / 1 | 2 / 1 / 1 |
 | `base45-fmt-oz-wasmopt` | 10,421 | 22 / 9 / 4 | 23 / 9 / 4 | 32 / 12 / 5 |
+
+With `url43` the three rows are 5 / 2 / 1, 2 / 1 / 1 and 24 / 9 / 4.
 
 ## 6. Mapping onto a Solid pod
 
@@ -179,11 +194,13 @@ Each criterion below is a check in `experiments/compression/bench.mjs` (check na
 5. The decoder rejects a decompression bomb, a declared length over the ceiling, a tampered payload, truncated input, a wrong version, a frame from another object, and missing frames. These are the five *decoder rejects…* and *reassembly rejects…* checks.
 6. Base45 matches the RFC 9285 examples, and the Rust-built fixture's base45 output equals the JS codec's. *base45 matches RFC 9285…*, *Rust base45 fixture agrees…*.
 7. A minimal provenance object (kind `0x04`, 442-byte NIP-94 event with pseudo-random hex, one dependency: 373 bytes after deflate) fits one bare v15-L binary symbol. *provenance object (kind 0x04) fits one bare v15-L binary symbol.*
+8. The `url43` transport round-trips radix 43, rejects overflow, and fits the incompressible 2,048-byte module in 2 frames at v25-L and 11 at v10-L. Every frame encodes at its stated version. *base43 round-trips…*; `url43@v10` and `url43@v25` in the frame-count criteria.
 
 ## 10. Unknowns
 
 - **Byte-mode integrity through scanners.** `BarcodeDetector.rawValue` is a `DOMString`, and some decoders guess a charset for byte-mode data. It is not known which browser and phone scanners return arbitrary bytes unchanged. Until a camera test exists, `base45` is the safe text-only fallback.
-- **Which browsers ship brotli in `DecompressionStream`.** This decides whether `0x02` becomes mandatory in a later version.
+- **Brotli in `DecompressionStream` outside Chrome.** Chrome 151 does not support it. Firefox and Safari have not been tested.
+- **Camera apps and upper-case links.** It is not known whether phone camera apps open an upper-case `HTTPS://` link and keep the fragment intact. `BarcodeDetector` is missing from Chrome 151 on Linux desktop; Android and macOS have not been tested.
 - **Real scan reliability.** How many frames per second a phone can read, and which versions it can read reliably at a given print size, has not been measured.
 - **A pre-shared deflate dictionary.** Priming deflate with a module the receiver already has took the 19.8 KB fixture from 10,346 to 9,966 bytes, 3.7% smaller. `DecompressionStream` has no dictionary option, so this would mean shipping an inflater. Not adopted.
 - **Fuzzing the §2.3 and §4 parsers.** Not yet done.
