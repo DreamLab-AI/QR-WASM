@@ -16,12 +16,18 @@ const ROUTES = {
 };
 for (const f of ['base43', 'bep52', 'codes', 'cose', 'envelope', 'idb', 'pointer', 'podstore', 'unseal']) ROUTES[`/lib/${f}.mjs`] = `web/lib/${f}.mjs`;
 
+/** Own scripts and WebAssembly only; connect-src stays open because home pods and relays are per user. */
+export const LAUNCHER_CSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+  "connect-src *; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
 export function startLauncher({port, host = '0.0.0.0'}) {
   const server = http.createServer(async (req, res) => {
     const file = ROUTES[new URL(req.url, 'http://x').pathname];
     if (!file || req.method !== 'GET') { res.writeHead(404).end(); return; }
     const type = file.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/javascript; charset=utf-8';
-    res.writeHead(200, {'content-type': type, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff'});
+    res.writeHead(200, {'content-type': type, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff',
+      // Consent buttons must not be clickjackable.
+      'content-security-policy': LAUNCHER_CSP, 'x-frame-options': 'DENY'});
     res.end(await readFile(new URL(file, here)));
   });
   return new Promise(r => server.listen(port, host, () => r({close: () => new Promise(c => server.close(c))})));

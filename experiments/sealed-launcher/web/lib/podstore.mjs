@@ -35,7 +35,15 @@ const NULL_BODY = new Set([101, 204, 205, 304]);
  * @param pod     createPod(...) from experiments/minimal-pod/shell.mjs
  * @param request {method, url, path, headers: {lower-case: value}, body: Uint8Array, now}
  */
-export async function serve(pod, store, request) {
+export function serve(pod, store, request) {
+  // Read, decide and write as one step per store, or two concurrent writes could both pass If-Match.
+  const run = (locks.get(store) ?? Promise.resolve()).then(() => serveNow(pod, store, request));
+  locks.set(store, run.catch(() => {}));
+  return run;
+}
+const locks = new WeakMap();
+
+async function serveNow(pod, store, request) {
   const result = pod.handle(request, await storedFor(store, request.path));
   if (result.status < 400) await applyOp(store, result.op);
   const empty = NULL_BODY.has(result.status) || request.method === 'HEAD';

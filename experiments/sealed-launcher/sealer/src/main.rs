@@ -39,6 +39,12 @@ fn main() {
         eprintln!("module exceeds the 1 MiB envelope ceiling");
         exit(1);
     }
+    // The launcher refuses blobs over 1 MiB + 4 KiB (web/lib/pointer.mjs MAX_BLOB): never emit an app code it would reject.
+    let envelope_len = qrw_seal::encode_envelope(qrw_seal::KIND_WASM, &bytes, &[]).len();
+    if qrw_seal::bucket(envelope_len).0 > qrw_seal::MAX_BLOB {
+        eprintln!("sealed blob would exceed the launcher's {} B limit; the module must compress below ~1 MiB", qrw_seal::MAX_BLOB);
+        exit(1);
+    }
     let sealed = qrw_seal::seal_module(&bytes);
     let root = hex::encode(sealed.root);
     std::fs::create_dir_all(&out).and_then(|_| std::fs::write(std::path::Path::new(&out).join(&root), &sealed.blob)).unwrap_or_else(|e| {

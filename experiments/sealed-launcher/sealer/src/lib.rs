@@ -17,6 +17,8 @@ pub const PIECE: usize = 16384;
 pub const NAME: &str = "m";
 pub const MAX_ENVELOPE_PAYLOAD: usize = 1 << 20;
 pub const KIND_WASM: u8 = 0x01;
+/// Largest blob the launcher fetches (web/lib/pointer.mjs `MAX_BLOB`).
+pub const MAX_BLOB: usize = (1 << 20) + 4096;
 
 /// Fixed COSE bytes around the ciphertext: tag 16 + array(3) + bstr{1:3} + {5: bstr(12)}.
 const COSE_FIXED: usize = 1 + 1 + 4 + 15;

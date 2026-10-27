@@ -3,9 +3,9 @@
 // fetches, verifies and unseals an app and hands it to the service worker.
 // Exposes window.qrw for the page UI and the e2e driver.
 
-import {parseFragment} from './lib/codes.mjs';
+import {parseFragment, homeTarget} from './lib/codes.mjs';
 import {unseal} from './lib/unseal.mjs';
-import {kv} from './lib/idb.mjs';
+import {kv, resources} from './lib/idb.mjs';
 import {BunkerSigner, generateSecretKey, bytesToHex, hexToBytes} from './vendor/nip46.mjs';
 
 // Take the fragment and drop it from the URL and history entry at once. A code
@@ -37,12 +37,12 @@ async function worker() {
   return reg;
 }
 
-function ask(message, transfer = []) {
-  return new Promise((resolve, reject) => {
+function ask(message, transfer = [], ms = 15000) {
+  return timeout(new Promise((resolve, reject) => {
     const ch = new MessageChannel();
     ch.port1.onmessage = e => (e.data.ok ? resolve(e.data) : reject(new Error(e.data.error)));
     navigator.serviceWorker.controller.postMessage(message, [ch.port2, ...transfer]);
-  });
+  }), ms, `service worker ${message.type}`);
 }
 
 let signer = null;
@@ -53,7 +53,38 @@ async function session() {
   return {cfg, signer};
 }
 
+/**
+ * Nothing a link carries is acted on until the person confirms it on this page:
+ * any site can navigate here with a crafted fragment. Resolves on Confirm,
+ * rejects on Cancel. (The launcher must also be served with frame-ancestors
+ * 'none' so the buttons cannot be clickjacked.)
+ */
+function consent(summary) {
+  show({phase: 'confirm', confirm: summary});
+  const box = document.getElementById('consent');
+  document.getElementById('consent-text').textContent = JSON.stringify(summary, null, 2);
+  box.hidden = false;
+  return new Promise((resolve, reject) => {
+    const done = ok => () => { box.hidden = true; show({confirm: undefined}); ok ? resolve() : reject(new Error('cancelled by user')); };
+    document.getElementById('confirm').onclick = done(true);
+    document.getElementById('cancel').onclick = done(false);
+  });
+}
+
+/** Re-pairing starts clean: a module or data from the previous pairing must not carry over. */
+async function wipe() {
+  await kv.delete('boot');
+  await resources.clear();
+  await caches.delete('qrw-blobs');
+  await ask({type: 'reset'});
+  signer = null;
+}
+
 async function pair(home) {
+  const existing = await kv.get('config');
+  await consent({action: 'pair with home', home: home.home, signer: home.signer, relays: home.relays,
+    replaces: existing ? existing.home : null, warning: existing ? 'replaces your current pairing and wipes this node' : undefined});
+  if (existing) await wipe();
   show({phase: 'pairing', home: home.home});
   const client = generateSecretKey();
   const s = BunkerSigner.fromBunker(client, {pubkey: home.signer, relays: home.relays, secret: home.secret});
@@ -70,10 +101,7 @@ async function fetchBlob(pointer, cfg) {
   const cache = await caches.open('qrw-blobs');
   const sources = [
     ['cache', async () => (await cache.match(`/blob/${root}`))?.arrayBuffer()],
-    ['home web seed', async () => {
-      const r = await fetch(new URL(`seed/${root}`, cfg.home), {cache: 'no-store'});
-      return r.ok ? r.arrayBuffer() : undefined;
-    }],
+    ['home web seed', () => readCapped(new URL(`seed/${root}`, cfg.home), pointer.length)],
   ];
   const tried = [];
   for (const [name, get] of sources) {
@@ -95,8 +123,32 @@ async function fetchBlob(pointer, cfg) {
   throw Object.assign(new Error('no source served the blob'), {rule: 2, tried});
 }
 
+/** Fetches at most `max` bytes within `ms`: an untrusted source cannot exhaust memory or stall the launcher. */
+async function readCapped(url, max, ms = 30000) {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(new Error('timed out')), ms);
+  try {
+    const r = await fetch(url, {cache: 'no-store', signal: abort.signal});
+    if (!r.ok) return undefined;
+    if (Number(r.headers.get('content-length') ?? 0) > max) throw new Error('larger than the pointer says');
+    const out = new Uint8Array(max);
+    let at = 0;
+    for (const reader = r.body.getReader(); ;) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      if (at + value.length > max) { abort.abort(); throw new Error('larger than the pointer says'); }
+      out.set(value, at);
+      at += value.length;
+    }
+    return out.subarray(0, at);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function boot(pointer) {
   const {cfg} = await session();
+  await consent({action: 'run app', objectId: hex(pointer.objectId), blobBytes: pointer.length, home: cfg.home});
   show({phase: 'fetching'});
   const {app, source, tried} = await fetchBlob(pointer, cfg);
   show({phase: 'starting', source, tried});
@@ -118,7 +170,7 @@ async function nip98(url, method, body) {
 async function put(path, text, contentType = 'text/plain') {
   const {cfg} = await session();
   const body = new TextEncoder().encode(text);
-  const target = new URL(path.slice(1), cfg.home).href;
+  const target = homeTarget(cfg.home, path);
   const authorization = await nip98(target, 'PUT', body);
   const init = {method: 'PUT', headers: {authorization, 'content-type': contentType}, body};
   const local = await fetch(`/pod${path}`, init);

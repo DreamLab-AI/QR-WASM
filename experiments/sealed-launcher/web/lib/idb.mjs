@@ -12,9 +12,15 @@ const open = () => new Promise((resolve, reject) => {
   req.onerror = () => reject(req.error);
 });
 
-let db;
+// One shared open, reset if the browser closes the connection or another context upgrades it.
+let opening;
+const database = () => (opening ??= open().then(d => {
+  d.onclose = d.onversionchange = () => { d.close(); opening = undefined; };
+  return d;
+}, e => { opening = undefined; throw e; }));
+
 async function tx(store, mode, fn) {
-  db ??= await open();
+  const db = await database();
   return new Promise((resolve, reject) => {
     const t = db.transaction(store, mode);
     const r = fn(t.objectStore(store));
@@ -26,6 +32,7 @@ async function tx(store, mode, fn) {
 export const kv = {
   get: key => tx('kv', 'readonly', s => s.get(key)),
   set: (key, value) => tx('kv', 'readwrite', s => s.put(value, key)),
+  delete: key => tx('kv', 'readwrite', s => s.delete(key)),
 };
 
 export const resources = {
@@ -33,4 +40,5 @@ export const resources = {
   set: (path, rec) => tx('resources', 'readwrite', s => s.put(rec, path)),
   delete: path => tx('resources', 'readwrite', s => s.delete(path)),
   keys: () => tx('resources', 'readonly', s => s.getAllKeys()),
+  clear: () => tx('resources', 'readwrite', s => s.clear()),
 };

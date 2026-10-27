@@ -10,6 +10,7 @@
 import {createPod} from './lib/pod-shell.mjs';
 import {serve} from './lib/podstore.mjs';
 import {kv, resources} from './lib/idb.mjs';
+import {homeTarget} from './lib/codes.mjs';
 
 const INSTANCE = crypto.randomUUID();
 // loads: modules instantiated by this instance; boots: boot messages accepted from the page.
@@ -31,12 +32,16 @@ async function load(rec) {
   loads++;
 }
 
-async function ensure() {
-  if (pod) return true;
-  const rec = await kv.get('boot');
-  if (!rec) return false;
-  await load(rec);
-  return true;
+// Concurrent cold-start requests share one load instead of instantiating twice.
+let starting = null;
+function ensure() {
+  if (pod) return Promise.resolve(true);
+  return (starting ??= (async () => {
+    const rec = await kv.get('boot');
+    if (!rec) return false;
+    await load(rec);
+    return true;
+  })().finally(() => { starting = null; }));
 }
 
 self.addEventListener('message', e => {
@@ -45,6 +50,10 @@ self.addEventListener('message', e => {
   if (e.data?.type === 'boot') {
     const rec = {module: new Uint8Array(e.data.module), objectId: e.data.objectId, owner: e.data.owner, home: e.data.home};
     reply(load(rec).then(() => kv.set('boot', rec)).then(() => ({instance: INSTANCE, boots: ++boots})));
+  } else if (e.data?.type === 'reset') {
+    // Re-pairing: drop the running pod; the page has already wiped its records.
+    pod = null; home = null; objectId = null;
+    reply(Promise.resolve({instance: INSTANCE}));
   } else if (e.data?.type === 'status') {
     reply(ensure().then(booted => ({booted, instance: INSTANCE, objectId, loads, boots})));
   }
@@ -53,17 +62,28 @@ self.addEventListener('message', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith('/pod/')) return;
+  // Pod output is data, never a document on the launcher origin (it would run with the
+  // origin's IndexedDB, signer session and worker): refuse navigations outright.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(new Response('pod resources cannot be opened as pages', {status: 403,
+      headers: {'content-type': 'text/plain; charset=utf-8', 'content-security-policy': "sandbox; default-src 'none'", 'x-content-type-options': 'nosniff'}}));
+    return;
+  }
   e.respondWith(handle(e.request, url));
 });
 
+// Applied to every /pod/* response, overriding the module's headers.
+const CONTAIN = {'content-security-policy': "sandbox; default-src 'none'", 'x-content-type-options': 'nosniff',
+  'content-disposition': 'attachment', 'cross-origin-resource-policy': 'same-origin'};
+
 async function handle(request, url) {
-  const meta = {'x-qrw-instance': INSTANCE, 'x-qrw-loads': String(loads)};
+  const meta = {...CONTAIN, 'x-qrw-instance': INSTANCE, 'x-qrw-loads': String(loads)};
   try {
     if (!(await ensure())) return new Response('no app booted', {status: 503, headers: meta});
     const path = url.pathname.slice('/pod'.length);
     const res = await serve(pod, resources, {
       method: request.method,
-      url: new URL(path.slice(1), home).href,
+      url: homeTarget(home, path),
       path,
       headers: Object.fromEntries([...request.headers].map(([k, v]) => [k.toLowerCase(), v])),
       body: new Uint8Array(await request.arrayBuffer()),

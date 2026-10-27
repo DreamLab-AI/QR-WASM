@@ -101,20 +101,28 @@ class Cdp {
 
 const statusOf = page => page.eval('window.qrw ? JSON.parse(JSON.stringify(window.qrw.status)) : null').catch(() => null);
 
-/** Opens a code link and waits for the launcher's result for *that* code: a new document, or a later seq in the same one. */
-async function scan(page, url, ms = 30000) {
+/**
+ * Opens a code link and waits for the launcher's result for *that* code: a new document, or a later
+ * seq in the same one. The launcher asks before acting on any code; `consent` says how to answer
+ * ('confirm' | 'cancel' | 'stop' to return at the prompt). The click is a real button press on the page.
+ */
+async function scan(page, url, {consent = 'confirm', ms = 30000} = {}) {
   const before = await statusOf(page);
   await page.go(url);
   const end = Date.now() + ms;
+  let answered = false;
   while (Date.now() < end) {
     const s = await statusOf(page);
     const fresh = s && (s.doc !== before?.doc || s.seq > before.seq);
-    if (fresh && ['paired', 'running', 'error'].includes(s.phase)) return s;
+    if (fresh && s.phase === 'confirm' && !answered) {
+      if (consent === 'stop') return s;
+      await page.eval(`document.getElementById('${consent}').click()`);
+      answered = true;
+    } else if (fresh && ['paired', 'running', 'error'].includes(s.phase)) return s;
     await new Promise(r => setTimeout(r, 200));
   }
   throw new Error(`launcher did not settle: ${JSON.stringify(await statusOf(page))}`);
 }
-
 
 /** Page-side access to the worker's boot record in IndexedDB, for tamper tests. */
 const BOOT_RECORD = `window.__boot ??= (() => {
@@ -192,6 +200,8 @@ try {
     const r = await page.eval("qrw.get('/notes/a.txt')");
     expect(r.status === 200 && r.text === 'hello from an ephemeral node', JSON.stringify(r));
     instanceA = r.instance;
+    const h = await page.eval(`fetch('/pod/notes/a.txt').then(r => ({csp: r.headers.get('content-security-policy'), nosniff: r.headers.get('x-content-type-options'), disposition: r.headers.get('content-disposition')}))`);
+    expect(/sandbox/.test(h.csp) && h.nosniff === 'nosniff' && h.disposition === 'attachment', `pod output contained: ${JSON.stringify(h)}`);
     const c = await page.eval("qrw.get('/notes/')");
     expect(c.status === 200 && JSON.parse(c.text)['ldp:contains'].some(x => x['@id'] === '/notes/a.txt'), c.text);
     return {etag: r.etag, container: JSON.parse(c.text)['ldp:contains']};
@@ -210,7 +220,7 @@ try {
 
   await step('signer policy refuses out-of-scope requests from the browser', async () => {
     const t = Math.floor(Date.now() / 1000);
-    const outside = await page.eval(`qrw.trySign({kind: 27235, created_at: ${t}, tags: [['u', 'http://localhost:8801.evil/x'], ['method', 'PUT']], content: ''})`);
+    const outside = await page.eval(`qrw.trySign({kind: 27235, created_at: ${t}, tags: [['u', 'http://evil.localhost:8801/x'], ['method', 'PUT']], content: ''})`);
     const note = await page.eval(`qrw.trySign({kind: 1, created_at: ${t}, tags: [], content: 'hi'})`);
     expect(outside.refused?.includes('not under home') && note.refused?.includes('27235'), JSON.stringify({outside, note}));
     return {outside: outside.refused, note: note.refused};
@@ -270,6 +280,35 @@ try {
     const s = await scan(page, `${LAUNCHER.toUpperCase()}#${base43.encode(p)}`);
     expect(s.phase === 'error' && s.rule === 2, JSON.stringify(s));
     return {tried: s.tried};
+  });
+
+  await step('a foreign home code is shown for consent and not applied on cancel', async () => {
+    const foreign = `${LAUNCHER}#bunker://${'ab'.repeat(32)}?relay=${encodeURIComponent('ws://localhost:9')}&secret=x&home=${encodeURIComponent('http://localhost:9/evil/')}`;
+    const prompt = await scan(page, foreign, {consent: 'stop'});
+    expect(prompt.confirm?.home === 'http://localhost:9/evil/' && prompt.confirm?.replaces === HOME && /replaces/.test(prompt.confirm?.warning), JSON.stringify(prompt));
+    await page.eval("document.getElementById('cancel').click()");
+    await new Promise(r => setTimeout(r, 300));
+    const s = await statusOf(page);
+    expect(s.phase === 'error' && /cancelled/.test(s.error), JSON.stringify(s));
+    const r = await page.eval("qrw.put('/notes/c.txt', 'still paired to the real home')");
+    expect(r.local === 201 && r.home === 201 && home.store.raw.has('/notes/c.txt'), `pairing unchanged: ${JSON.stringify(r)}`);
+    return {prompt: prompt.confirm};
+  });
+
+  await step('an app code is not run until confirmed', async () => {
+    const before = await page.eval('qrw.workerStatus()');
+    const prompt = await scan(page, sealed.appLink, {consent: 'cancel'});
+    const after = await page.eval('qrw.workerStatus()');
+    expect(prompt.phase === 'error' && /cancelled/.test(prompt.error) && after.boots === before.boots, JSON.stringify({prompt, before, after}));
+    return {boots: after.boots};
+  });
+
+  await step('pod resources cannot be opened as top-level pages on the launcher origin', async () => {
+    await page.go(`${LAUNCHER}pod/notes/a.txt`);
+    await new Promise(r => setTimeout(r, 500));
+    const text = await page.eval('document.body?.innerText ?? ""');
+    expect(/cannot be opened as pages/.test(text), text);
+    return {text};
   });
 
   await step('the home code is single-use: a second browser cannot pair with it', async () => {

@@ -19,10 +19,19 @@ const KIND = 24133;
 export function policy(template, home, now = Math.floor(Date.now() / 1000)) {
   if (template?.kind !== 27235) return 'only kind 27235 (NIP-98) is signed';
   if (!Array.isArray(template.tags)) return 'missing tags';
+  // Exactly one of each known tag: verifiers differ on first- versus last-match, so duplicates are refused.
+  const names = template.tags.map(t => (Array.isArray(t) && t.length === 2 && t.every(x => typeof x === 'string') ? t[0] : null));
+  if (names.some(n => !['u', 'method', 'payload'].includes(n))) return 'unknown or malformed tag';
+  if (new Set(names).size !== names.length) return 'duplicate tag';
   const tag = name => template.tags.find(t => t[0] === name)?.[1];
   const u = tag('u');
-  if (!u || !underHome(u, home)) return 'u is not under home';
-  if (!tag('method')) return 'missing method tag';
+  let canonical;
+  try { canonical = new URL(u).href; } catch { return 'u is not a URL'; }
+  if (u !== canonical) return 'u is not in canonical form';
+  if (!underHome(u, home)) return 'u is not under home';
+  if (!['GET', 'HEAD', 'PUT', 'DELETE'].includes(tag('method'))) return 'method not allowed';
+  const payload = tag('payload');
+  if (payload !== undefined && !/^[0-9a-f]{64}$/.test(payload)) return 'payload must be a SHA-256 hex digest';
   if (!Number.isSafeInteger(template.created_at) || Math.abs(template.created_at - now) > 60) return 'created_at outside ±60 s';
   if (template.content !== '') return 'content must be empty';
   return null;

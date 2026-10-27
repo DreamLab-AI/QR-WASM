@@ -12,15 +12,15 @@
     {
       "name": "home code pairs with the remote signer; fragment removed from URL",
       "ok": true,
-      "ms": 487,
+      "ms": 529,
       "detail": {
-        "owner": "3fbc9d7158eaca49797d6b6a7d5b5a6d8e094f9c2a23f6915d40c86b1301c962"
+        "owner": "1e19a2e1d54425a10584d09bdd0b83eead2790534811fc7b3968739ac9c2995e"
       }
     },
     {
       "name": "app code: fetch from home web seed, verify, unseal, boot pod in service worker",
       "ok": true,
-      "ms": 47,
+      "ms": 247,
       "detail": {
         "source": "home web seed",
         "tried": [
@@ -32,7 +32,7 @@
     {
       "name": "signed write lands locally and at home (one NIP-98 signature via NIP-46)",
       "ok": true,
-      "ms": 101,
+      "ms": 72,
       "detail": {
         "local": 201,
         "home": 201,
@@ -42,7 +42,7 @@
     {
       "name": "local pod serves the resource and the LDP container",
       "ok": true,
-      "ms": 10,
+      "ms": 14,
       "detail": {
         "etag": "\"1145f27fe642fae18e3728410d70329e0713488f71e322c72406fb48af4addbc\"",
         "container": [
@@ -55,7 +55,7 @@
     {
       "name": "unsigned and wrongly signed writes are refused by the module",
       "ok": true,
-      "ms": 9,
+      "ms": 7,
       "detail": {
         "unsigned": 401,
         "forged": 401
@@ -64,7 +64,7 @@
     {
       "name": "signer policy refuses out-of-scope requests from the browser",
       "ok": true,
-      "ms": 112,
+      "ms": 124,
       "detail": {
         "outside": "u is not under home",
         "note": "only kind 27235 (NIP-98) is signed"
@@ -73,16 +73,16 @@
     {
       "name": "service worker stopped and restarted cold: module re-hashed, data intact",
       "ok": true,
-      "ms": 563,
+      "ms": 561,
       "detail": {
-        "before": "fe632b1e-0a54-4cf6-b453-13f0251d0954",
-        "after": "178a8086-2714-491f-9ada-88d50ed1d408"
+        "before": "4d74d6e3-939f-4f04-b54a-cfdf169d1cc4",
+        "after": "97f9a831-b174-40a3-865c-d4e18148c651"
       }
     },
     {
       "name": "module corrupted in IndexedDB is refused on cold start, before instantiation",
       "ok": true,
-      "ms": 565,
+      "ms": 562,
       "detail": {
         "status": 500,
         "text": "Error: module does not match its object ID",
@@ -92,7 +92,7 @@
     {
       "name": "re-scanning the app code boots from the verified local cache (and repairs the record)",
       "ok": true,
-      "ms": 52,
+      "ms": 254,
       "detail": {
         "source": "cache"
       }
@@ -100,7 +100,7 @@
     {
       "name": "tampered app code (wrong key) fails at rule 4 and runs nothing new",
       "ok": true,
-      "ms": 59,
+      "ms": 260,
       "detail": {
         "error": "rule 4: AES-GCM authentication failed",
         "boots": 1,
@@ -110,7 +110,7 @@
     {
       "name": "pointer to an unseeded blob fails at rule 2",
       "ok": true,
-      "ms": 46,
+      "ms": 249,
       "detail": {
         "tried": [
           "cache: absent",
@@ -119,9 +119,42 @@
       }
     },
     {
+      "name": "a foreign home code is shown for consent and not applied on cancel",
+      "ok": true,
+      "ms": 445,
+      "detail": {
+        "prompt": {
+          "action": "pair with home",
+          "home": "http://localhost:9/evil/",
+          "signer": "abababababababababababababababababababababababababababababababab",
+          "relays": [
+            "ws://localhost:9"
+          ],
+          "replaces": "http://localhost:8801/",
+          "warning": "replaces your current pairing and wipes this node"
+        }
+      }
+    },
+    {
+      "name": "an app code is not run until confirmed",
+      "ok": true,
+      "ms": 250,
+      "detail": {
+        "boots": 1
+      }
+    },
+    {
+      "name": "pod resources cannot be opened as top-level pages on the launcher origin",
+      "ok": true,
+      "ms": 559,
+      "detail": {
+        "text": "pod resources cannot be opened as pages"
+      }
+    },
+    {
       "name": "the home code is single-use: a second browser cannot pair with it",
       "ok": true,
-      "ms": 503,
+      "ms": 729,
       "detail": {
         "error": "secret invalid or already used"
       }
