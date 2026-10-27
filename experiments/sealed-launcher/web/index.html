@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>QR-WASM launcher</title>
+  <style>
+    :root { color-scheme: light dark; --fg: #1d1d1f; --bg: #fafafa; --muted: #6e6e73; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #f2f2f2; --bg: #161618; --muted: #a1a1a6; } }
+    body { margin: 0; padding: 16px; font: 15px/1.5 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+    pre { white-space: pre-wrap; word-break: break-all; font-size: 13px; }
+    p { color: var(--muted); max-width: 40rem; }
+  </style>
+</head>
+<body>
+  <h1>QR-WASM launcher</h1>
+  <p>Scan your home code once to pair, then any app code. Codes arrive in the URL fragment and are removed from history as soon as they are read.</p>
+  <pre id="status">starting…</pre>
+  <script type="module" src="/launcher.mjs"></script>
+</body>
+</html>
