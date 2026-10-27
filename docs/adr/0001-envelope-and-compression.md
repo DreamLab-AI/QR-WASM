@@ -39,7 +39,7 @@ QR-WASM objects travel as QR symbols at error-correction level L. The probed cap
 | hand-built `provider` / `consumer` | 43 / 62 | 43 / 63 | 40 / 60 |
 | Rust `base45-oz-wasmopt` | 775 | 503 | 493 |
 | Rust `base45-fmt-oz-wasmopt` | 19,837 | 10,346 | 9,155 |
-| minimal pod P2 (`experiments/minimal-pod`) | 48,303 | 22,415 | 18,600 |
+| minimal pod P2 (`experiments/minimal-pod`) | 48,678 | 22,573 | 18,842 |
 
 **Why deflate-raw and not brotli:**
 - Modules under about 64 bytes grow under deflate, so per-object selection with `none` as a candidate is required. This is the same shortest-of-candidates rule TLO's `packDoc` uses (`src/kit/core/codec.ts:122`, TLO `399d217`).

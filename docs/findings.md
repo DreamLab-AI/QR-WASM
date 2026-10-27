@@ -17,14 +17,15 @@ The Service Worker spec registers only `http`/`https` scripts ([Register](https:
 | Origin serves | QR codes | Notes |
 |---|---|---|
 | A pod-specific shell, verifier included | **1** | The origin already holds the policy, so sending the verifier by QR adds nothing |
-| A generic QR-WASM loader only (the project's model) | **1 + 19** at v25-L binary, or 1 + 8 at v40-L | Pod rung P2: 48,303 B wasm, 22,415 B deflate-raw, 22,458 B envelope |
+| A generic QR-WASM loader only (the project's model) | **1 + 19** at v25-L binary, or 1 + 8 at v40-L | Pod rung P2: 48,678 B wasm, 22,573 B deflate-raw, 22,616 B envelope |
 | The same, as camera-openable `url43` links | 1 + 20 at v25, 1 + 9 at v40 | Mixed-segment URLs (§3) |
-| The same, built on nightly | 1 + 18 at v25, 1 + 8 at v40 | Rung P3: 46,607 B |
+| The same, built on nightly | 1 + 18 at v25, 1 + 8 at v40 | Rung P3: 46,977 B |
 
 All of these rungs pass:
 - 19 BIP-340 vectors;
 - 26 signed NIP-98 / LDP vectors (`experiments/minimal-pod/vectors/`);
-- the same set run twice on one instance, plus 1 MiB request and response bodies.
+- the same set run twice on one instance, plus 1 MiB request and response bodies;
+- no memory growth across 200 requests in a long-lived instance.
 
 They pass natively (`cargo test`), in Node through the JS shell (`node test.mjs`), and in Chrome 151 through the same shell (`browser-results.json`).
 
@@ -37,22 +38,22 @@ Each step changes one variable, except A → P, which moves JSON parsing to the 
 | A1 | std, serde_json + base64 inside wasm | 109,450 | 50,654 | 42 |
 | A2 | + bump allocator | 100,670 | 47,182 | 39 |
 | C2 | + nightly immediate-abort | 79,321 | 38,013 | 31 |
-| P1 | `no_std`; shell does `JSON.parse` and base64; module rebuilds NIP-01 | 55,164 | 25,324 | 21 |
-| **P2** | + bump allocator, no `core::fmt` (stable) | **48,303** | **22,415** | **19** |
-| P3 | + nightly `build-std` immediate-abort | 46,607 | 21,563 | 18 |
-| P4 | P2 using libsecp256k1 `lowmemory` | 75,672 | 46,608 | 38 |
-| V3 | BIP-340 verifier alone (lower bound for any Nostr pod) | 30,264 | 13,801 | 12 |
+| P1 | `no_std`; shell does `JSON.parse` and base64; module rebuilds NIP-01 | 55,556 | 25,453 | 21 |
+| **P2** | + bump allocator, no `core::fmt` (stable) | **48,678** | **22,573** | **19** |
+| P3 | + nightly `build-std` immediate-abort | 46,977 | 21,713 | 18 |
+| P4 | P2 using libsecp256k1 `lowmemory` | 76,047 | 46,767 | 38 |
+| V3 | BIP-340 verifier alone (lower bound for any Nostr pod) | 30,508 | 13,953 | 12 |
 
 The levers, largest first:
 
-1. **Use the browser instead of shipping code, together with `no_std`.** A1 → P1 is 50% smaller (109,450 → 55,164). Moving JSON parsing and base64 to the shell is safe because the module verifies the signature over the very fields it acts on.
-2. **Per-request bump allocator.** 6.9 KB on `no_std` (P1 → P2 minus the `core::fmt` change), 8.8 KB on std (A1 → A2). It is sound because the module is a pure function and `reset()` runs before each request.
-3. **Removing `core::fmt`.** 5.0 KB, by writing decimals and joining strings by hand.
+1. **Use the browser instead of shipping code, together with `no_std`.** A1 → P1 is 49% smaller (109,450 → 55,556). Moving JSON parsing and base64 to the shell is safe because the module verifies the signature over the very fields it acts on.
+2. **Per-request bump allocator.** 6.9 KB on `no_std` (P1 → P2), 8.8 KB on std (A1 → A2). It is sound because the module is a pure function and `reset()` runs before each request.
+3. **Removing `core::fmt`.** 5.0 KB, by writing decimals and joining strings by hand (measured between two intermediate builds, 53,335 → 48,303 B).
 4. **Nightly immediate-abort panics.** 21 KB on the std design (A2 → C2), but only 1.7 KB once `no_std` with a trapping panic handler is in place (P2 → P3). Stable `no_std` gets most of the gain without nightly.
 
 Pure-Rust k256 beats libsecp256k1 by about 22 KB.
 
-What is left: the verifier (k256 field and scalar arithmetic) is about 30 KB of the 48 KB, and the pod logic plus SHA-256 and hex are about 18 KB.
+What is left: the verifier (k256 field and scalar arithmetic) is about 30 KB of the 49 KB, and the pod logic plus SHA-256 and hex are about 18 KB.
 
 ## 3. Findings: TLO ideas scored against QR-WASM
 

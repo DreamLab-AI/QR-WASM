@@ -503,17 +503,17 @@ mod exports {
         bump::reset();
     }
 
+    // Buffers crossing the boundary are exact-length boxed slices, so `dealloc`
+    // can rebuild the same layout. The shell frees the request and the response
+    // after copying it out; under `bump` both calls are no-ops and `reset` reclaims.
     #[no_mangle]
     pub extern "C" fn alloc(len: usize) -> *mut u8 {
-        let mut v = Vec::<u8>::with_capacity(len);
-        let p = v.as_mut_ptr();
-        core::mem::forget(v);
-        p
+        alloc::boxed::Box::leak(alloc::vec![0u8; len].into_boxed_slice()).as_mut_ptr()
     }
 
     #[no_mangle]
     pub unsafe extern "C" fn dealloc(ptr: *mut u8, len: usize) {
-        drop(Vec::from_raw_parts(ptr, 0, len));
+        drop(alloc::boxed::Box::from_raw(core::ptr::slice_from_raw_parts_mut(ptr, len)));
     }
 
     /// BIP-340 verification: 32-byte key, message, 64-byte signature. Returns 1 if valid.
@@ -535,7 +535,7 @@ mod exports {
     #[no_mangle]
     pub unsafe extern "C" fn handle(ptr: *const u8, len: usize) -> u64 {
         let owner = *core::ptr::addr_of!(OWNER);
-        let out = pod::handle_wire(&owner, core::slice::from_raw_parts(ptr, len)).leak();
+        let out = alloc::boxed::Box::leak(pod::handle_wire(&owner, core::slice::from_raw_parts(ptr, len)).into_boxed_slice());
         ((out.as_ptr() as u64) << 32) | out.len() as u64
     }
 }

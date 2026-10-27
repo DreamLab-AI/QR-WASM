@@ -55,6 +55,7 @@ export async function createPod(wasm, ownerHex) {
     const p = x.alloc(32);
     new Uint8Array(x.memory.buffer).set(owner, p);
     x.set_owner(p);
+    x.dealloc(p, 32);
   };
   boot();
 
@@ -76,9 +77,12 @@ export async function createPod(wasm, ownerHex) {
       x.reset();
       const p = x.alloc(wire.length);
       new Uint8Array(x.memory.buffer).set(wire, p);
-      const r = x.handle(p, wire.length);
-      // Copy out before the next reset() can reclaim the response.
-      const out = new Uint8Array(x.memory.buffer, Number(BigInt.asUintN(64, r) >> 32n), Number(BigInt.asUintN(64, r) & 0xffffffffn)).slice();
+      const r = BigInt.asUintN(64, x.handle(p, wire.length));
+      const rp = Number(r >> 32n), rl = Number(r & 0xffffffffn);
+      // Copy out, then free both buffers (no-ops under the bump allocator, where reset() reclaims).
+      const out = new Uint8Array(x.memory.buffer, rp, rl).slice();
+      x.dealloc(rp, rl);
+      x.dealloc(p, wire.length);
       const [code, headerText, body, op, opPath, opType, opBody] = readFields(out);
       const dec = new TextDecoder();
       const headers = Object.fromEntries(dec.decode(headerText).split('\n').filter(Boolean).map(l => l.split(/: (.*)/s).slice(0, 2)));

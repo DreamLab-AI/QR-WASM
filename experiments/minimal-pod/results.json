@@ -13,12 +13,12 @@
     "P1-pod-k256.wasm": {
       "pod": true,
       "passed": true,
-      "wasm": 55164,
-      "deflate": 25324,
-      "brotli": 21394,
+      "wasm": 55556,
+      "deflate": 25453,
+      "brotli": 21481,
       "framesDeflate": {
         "v10": 110,
-        "v15": 53,
+        "v15": 54,
         "v25": 21,
         "v40": 9
       },
@@ -32,18 +32,18 @@
     "P2-pod-k256-bump.wasm": {
       "pod": true,
       "passed": true,
-      "wasm": 48303,
-      "deflate": 22415,
-      "brotli": 18600,
+      "wasm": 48678,
+      "deflate": 22573,
+      "brotli": 18842,
       "framesDeflate": {
-        "v10": 97,
-        "v15": 47,
+        "v10": 98,
+        "v15": 48,
         "v25": 19,
         "v40": 8
       },
       "framesBrotli": {
-        "v10": 81,
-        "v15": 39,
+        "v10": 82,
+        "v15": 40,
         "v25": 16,
         "v40": 7
       }
@@ -51,12 +51,12 @@
     "P3-pod-k256-bump-ia.wasm": {
       "pod": true,
       "passed": true,
-      "wasm": 46607,
-      "deflate": 21563,
-      "brotli": 18072,
+      "wasm": 46977,
+      "deflate": 21713,
+      "brotli": 18202,
       "framesDeflate": {
         "v10": 94,
-        "v15": 45,
+        "v15": 46,
         "v25": 18,
         "v40": 8
       },
@@ -70,18 +70,18 @@
     "P4-pod-secp-bump.wasm": {
       "pod": true,
       "passed": true,
-      "wasm": 75672,
-      "deflate": 46608,
-      "brotli": 42736,
+      "wasm": 76047,
+      "deflate": 46767,
+      "brotli": 42935,
       "framesDeflate": {
         "v10": 202,
-        "v15": 97,
+        "v15": 98,
         "v25": 38,
         "v40": 17
       },
       "framesBrotli": {
-        "v10": 185,
-        "v15": 89,
+        "v10": 186,
+        "v15": 90,
         "v25": 35,
         "v40": 15
       }
@@ -89,28 +89,28 @@
     "V1-verify-k256.wasm": {
       "pod": false,
       "passed": true,
-      "wasm": 37893,
-      "deflate": 17355,
-      "brotli": 14450,
+      "wasm": 38815,
+      "deflate": 17799,
+      "brotli": 14793,
       "framesDeflate": {
-        "v10": 75,
-        "v15": 37,
+        "v10": 77,
+        "v15": 38,
         "v25": 15,
-        "v40": 6
+        "v40": 7
       },
       "framesBrotli": {
-        "v10": 63,
+        "v10": 64,
         "v15": 31,
-        "v25": 12,
-        "v40": 5
+        "v25": 13,
+        "v40": 6
       }
     },
     "V2-verify-k256-bump.wasm": {
       "pod": false,
       "passed": true,
-      "wasm": 32764,
-      "deflate": 15061,
-      "brotli": 12311,
+      "wasm": 33121,
+      "deflate": 15261,
+      "brotli": 12500,
       "framesDeflate": {
         "v10": 66,
         "v15": 32,
@@ -118,8 +118,8 @@
         "v40": 6
       },
       "framesBrotli": {
-        "v10": 54,
-        "v15": 26,
+        "v10": 55,
+        "v15": 27,
         "v25": 11,
         "v40": 5
       }
@@ -127,12 +127,12 @@
     "V3-verify-k256-bump-ia.wasm": {
       "pod": false,
       "passed": true,
-      "wasm": 30264,
-      "deflate": 13801,
-      "brotli": 11376,
+      "wasm": 30508,
+      "deflate": 13953,
+      "brotli": 11443,
       "framesDeflate": {
-        "v10": 60,
-        "v15": 29,
+        "v10": 61,
+        "v15": 30,
         "v25": 12,
         "v40": 5
       },
@@ -146,20 +146,20 @@
     "V4-verify-secp-bump.wasm": {
       "pod": false,
       "passed": true,
-      "wasm": 54798,
-      "deflate": 37927,
-      "brotli": 34891,
+      "wasm": 55155,
+      "deflate": 38086,
+      "brotli": 35069,
       "framesDeflate": {
-        "v10": 164,
-        "v15": 79,
+        "v10": 165,
+        "v15": 80,
         "v25": 31,
         "v40": 14
       },
       "framesBrotli": {
-        "v10": 151,
+        "v10": 152,
         "v15": 73,
         "v25": 29,
-        "v40": 12
+        "v40": 13
       }
     }
   }

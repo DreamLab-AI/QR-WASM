@@ -41,7 +41,7 @@ The global rules forbid hand-rolled cryptography and bespoke token formats.
 
 | Option | Result | Verdict |
 |---|---|---|
-| libsecp256k1 (`secp256k1` 0.31, `lowmemory`) instead of k256 | Verifier 54,798 B against 32,764 B; its tables sit in the data section | Rejected on size |
+| libsecp256k1 (`secp256k1` 0.31, `lowmemory`) instead of k256 | Verifier 55,155 B against 33,121 B; its tables sit in the data section | Rejected on size |
 | Packed 104-byte provenance trailer (key, timestamp, signature; rest rebuilt from a template) | Saves about 270 B against the 373-byte standard event | Rejected: a bespoke format that no Nostr tool can read |
 | Depend on `solid-pod-rs-nostr` directly in the browser module | Its `Event` pulls in serde_json and std; the A1 rung (serde_json in wasm) was 109 KB | Rejected for the browser; same primitive used instead |
 | Ed25519 did:key, verified with WebCrypto | Chrome 151 verifies RFC 8032 test 1 natively; secp256k1 is `NotSupportedError` | **Not adopted: did:nostr and NIP-98 require secp256k1.** This is an operator decision; it would remove the verifier entirely (see findings §5) |

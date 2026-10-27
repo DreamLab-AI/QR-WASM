@@ -55,6 +55,16 @@ for (const name of fixtures) {
     const get = pod.handle({method: 'GET', url: 'https://pod.example/big', path: '/big', headers: {}, now: vectors.now},
       {kind: 'resource', contentType: 'application/octet-stream', body: big});
     if (get.status !== 200 || !Buffer.from(get.body).equals(Buffer.from(big))) failed.push(`1 MiB GET gave ${get.status}`);
+
+    // A long-lived worker must not grow: memory after 200 requests equals memory after 20.
+    const body = new Uint8Array(1 << 16).fill(3);
+    const one = () => pod.handle({method: 'GET', url: 'https://pod.example/r', path: '/r', headers: {}, now: vectors.now},
+      {kind: 'resource', contentType: 'application/octet-stream', body});
+    for (let i = 0; i < 20; i++) one();
+    const settled = pod.exports().memory.buffer.byteLength;
+    for (let i = 0; i < 180; i++) one();
+    const after = pod.exports().memory.buffer.byteLength;
+    if (after !== settled) failed.push(`memory grew ${settled} → ${after} over 180 requests`);
   }
 
   const deflate = zlib.deflateRawSync(bytes, {level: 9}).length;
