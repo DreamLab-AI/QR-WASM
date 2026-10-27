@@ -266,20 +266,27 @@ check('reassembly rejects a frame from another object and missing frames', () =>
   assert.throws(() => reassemble(a.slice(1)), /missing/);
 });
 
-// Spec §7 acceptance criteria: incompressible 2 KiB module with one dependency.
+// Spec §9 acceptance criteria: incompressible 2 KiB module with one dependency.
 const AC = {'binary@v15': 5, 'binary@v25': 2, 'base45@v25': 2, 'url@v25': 3, 'binary@v40': 1};
-check('spec §7 frame-count acceptance criteria hold', () => {
+check('spec §9 frame-count acceptance criteria hold', () => {
   for (const [k, n] of Object.entries(AC)) assert.equal(frameTable['incompressible-2048'][k], n, k);
 });
 
 // --- Provenance sizing (ADR-0002): NIP-94 kind 1063 event committing to the digest
-const hex64 = 'a'.repeat(64);
-const event = {id: hex64, pubkey: hex64, created_at: 1790000000, kind: 1063,
-  tags: [['x', hex64], ['m', 'application/wasm']], content: '', sig: 'b'.repeat(128)};
+// Hex fields are pseudo-random so compression sees realistic entropy (about 4 bits per character).
+const hexOf = (seed, n) => sha(Buffer.from(seed)).toString('hex').repeat(2).slice(0, n);
+const event = {id: hexOf('id', 64), pubkey: hexOf('pubkey', 64), created_at: 1790000000, kind: 1063,
+  tags: [['x', sha(hand.provider).toString('hex')], ['m', 'application/wasm']], content: '', sig: hexOf('sig', 64) + hexOf('sig2', 64)};
+const eventJson = Buffer.from(JSON.stringify(event));
+const provenanceEnvelope = encodeObject(eventJson, {kind: 4, deps: [dep]});
 const provenance = {
-  nip01EventJsonBytes: Buffer.byteLength(JSON.stringify(event)),
+  nip01EventJsonBytes: eventJson.length,
+  provenanceEnvelopeBytes: provenanceEnvelope.length,
   packedTrailerBytes: 32 + 8 + 64, // pubkey, created_at u64, sig; id, tags and content are reconstructed
 };
+check('provenance object (kind 0x04) fits one bare v15-L binary symbol', () => {
+  assert.ok(fits([{data: provenanceEnvelope, mode: 'byte'}], 15));
+});
 
 // --- Report -----------------------------------------------------------------
 const results = {

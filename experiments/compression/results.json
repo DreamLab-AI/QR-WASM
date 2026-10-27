@@ -235,6 +235,7 @@
   },
   "provenance": {
     "nip01EventJsonBytes": 442,
+    "provenanceEnvelopeBytes": 373,
     "packedTrailerBytes": 104
   },
   "fixtureSha256": {
@@ -471,7 +472,11 @@
       "ok": true
     },
     {
-      "name": "spec §7 frame-count acceptance criteria hold",
+      "name": "spec §9 frame-count acceptance criteria hold",
+      "ok": true
+    },
+    {
+      "name": "provenance object (kind 0x04) fits one bare v15-L binary symbol",
       "ok": true
     }
   ]
