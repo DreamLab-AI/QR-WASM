@@ -1,0 +1,40 @@
+[package]
+name = "qrwasm-minimal-pod"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Size probe: the smallest NIP-98-authenticated, did:nostr-owned LDP pod that runs as one WebAssembly module behind a browser service worker."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["k256", "pod"]
+# Schnorr backend: exactly one.
+k256 = ["dep:k256"]
+libsecp256k1 = ["dep:secp256k1"]
+# The LDP + NIP-98 pod logic; without it only `schnorr_verify` is exported.
+pod = ["dep:serde_json", "dep:base64", "dep:hex", "dep:sha2"]
+# Per-request bump allocator (wasm32 only).
+bump = []
+
+[dependencies]
+k256 = { version = "0.13", default-features = false, features = ["schnorr"], optional = true }
+secp256k1 = { version = "0.31", default-features = false, features = ["alloc", "lowmemory"], optional = true }
+sha2 = { version = "0.10", default-features = false, optional = true }
+serde_json = { version = "1", default-features = false, features = ["alloc"], optional = true }
+base64 = { version = "0.22", default-features = false, features = ["alloc"], optional = true }
+hex = { version = "0.4", default-features = false, features = ["alloc"], optional = true }
+
+[dev-dependencies]
+k256 = { version = "0.13", features = ["schnorr"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[workspace]
