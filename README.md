@@ -5,7 +5,7 @@ Experimental QR-transported modular WebAssembly computing environment.
 **Status:** research prototype on branch `mission/qr-object-v1`.
 - Envelope v1 is specified and gated.
 - A minimal did:nostr pod is built and measured: it needs 1 bootstrap QR code plus 19 version-25 codes (or 8 at version 40).
-- The **sealed single-QR bootstrap** below is implemented in [`experiments/sealed-launcher/`](experiments/sealed-launcher/). It passes 11/11 end-to-end steps in Chrome 151: pair, boot the pod from a web seed, signed write-through home, and cold worker restart.
+- The **sealed single-QR bootstrap** below is implemented in [`experiments/sealed-launcher/`](experiments/sealed-launcher/). It passes 15/15 end-to-end steps in Chrome 151, after a cross-vendor audit and two security reviews (see [findings §7](docs/findings.md#7-sealed-single-qr-bootstrap-draft-0)).
 - Every number in this repository comes from a script here. Earlier conversational results were never recovered.
 
 ## Sealed single-QR bootstrap (draft 0)
@@ -61,16 +61,17 @@ Reject at the first failure. Nothing runs until rule 7 passes.
 ### Runtime
 
 - **Page (launcher):** parses the codes, fetches, verifies and unseals. It holds the NIP-46 client and, later, the WebTorrent client. Workers have no `RTCPeerConnection`; this was measured in Chrome 151.
-- **Service worker:** receives the verified module bytes from the page, re-hashes them against the object ID (also on every cold start from IndexedDB), instantiates the pod (`experiments/minimal-pod`, policy entirely inside the hashed module), and serves same-origin `/pod/*` with `url = home + path`, as a write-through replica of the home namespace. State lives in IndexedDB. The node is **ephemeral**: it lives while its tab does.
+- **Service worker:** receives the verified module bytes from the page, re-hashes them against the object ID (also on every cold start from IndexedDB), instantiates the pod (`experiments/minimal-pod`, policy entirely inside the hashed module), and serves same-origin `/pod/*` with `url = home + path`, as a write-through replica of the home namespace. Every `/pod/*` response is forced to `CSP: sandbox`, `nosniff` and `attachment`, and top-level navigations to it are refused. The node is **ephemeral** in liveness (it serves while its tab is open), but its state, including the decrypted module and the NIP-46 client key, stays in IndexedDB until re-pairing wipes it.
 - **Home pod** (the owner's main Solid server): web seed for blobs, NIP-98 write target and source of truth. The ephemeral node pushes writes home as NIP-98 `PUT`s signed through NIP-46 `sign_event`.
-- **Pairing:** scan the home code → `connect(signer, secret)` with a fresh NIP-46 client keypair → `get_public_key` = pod owner. Store `{relay, signer, home, owner, client key}` in IndexedDB.
-- **Signer policy:** sign only kind 27235 events whose `u` tag starts with `home`. The `secret` is single-use and binds the first client that connects.
+- **Consent:** nothing a link carries is acted on until the person confirms it on the launcher page, because any site can navigate there with a crafted fragment. Replacing a pairing shows a warning and wipes the node. The launcher is served with a strict CSP and `frame-ancestors 'none'`.
+- **Pairing:** scan the home code → confirm → `connect(signer, secret)` with a fresh NIP-46 client keypair → `get_public_key` = pod owner. Store `{relay, signer, home, owner, client key}` in IndexedDB.
+- **Signer policy:** sign only kind 27235 events with exactly one `u`, `method` and optional `payload` tag, where `u` is canonical, lies under `home` by parsed origin and path prefix, contains no encoded `/`, `\\` or `.`, and the method is GET, HEAD, PUT or DELETE. The `secret` is single-use and binds the first client that connects. A home or relay must be https/wss except on loopback.
 
 ### Trust and leakage
 
 | Party | Learns or can do |
 |---|---|
-| Launcher origin | **Trusted.** It reads the fragment key. Mitigations: small auditable launcher, installed as a PWA, multiple origins |
+| Launcher origin | **Trusted.** It reads the fragment key, and pod output is served on it (contained, not isolated). Mitigations: small auditable launcher, strict CSP, installed as a PWA, multiple origins; next step: serve `/pod/*` from a separate origin |
 | Blob sources (seeders, web seed, tracker, network) | Infohash, size bucket and peer IPs; never plaintext. A swapped blob fails rule 3 or 4 |
 | Holder of the app code | Decrypts and runs the app. It's a bearer capability |
 | Holder of the home code | Requests signatures within the signer policy until revoked at the signer. It's a bearer credential, not a key |
@@ -96,7 +97,7 @@ Reject at the first failure. Nothing runs until rule 7 passes.
 - [docs/adr/](docs/adr/): decisions 0001–0003.
 
 ## Resume here
-1. Draft 0 is implemented; see [its README](experiments/sealed-launcher/README.md) for gates and findings. Open review items are in [docs/findings.md](docs/findings.md) §6.
+1. Draft 0 is implemented; see [its README](experiments/sealed-launcher/README.md) for gates and findings. Known open items are in [docs/findings.md](docs/findings.md) §7.
 2. Phone camera test of `url43` and of the home code.
 3. Torrent transport: WebTorrent 3.0.21 is v1-only, so it needs the v1 locator plus a wss tracker and BEP 19 range requests on the web seed.
 4. Recommendations for solid-pod-rs: CORS and range requests for the web seed, a content-addressed container, conditional requests, NIP-01 escaping. Not yet raised there.

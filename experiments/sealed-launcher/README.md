@@ -19,7 +19,7 @@ This experiment implements the "Sealed single-QR bootstrap" in the [top-level RE
 ```sh
 npm ci && npm run build                 # nostr-tools bundle for the browser (web/vendor/, gitignored)
 (cd sealer && cargo test && cargo build --release)
-npm test                                # unit gates (46 checks)
+npm test                                # unit gates (49 checks)
 node test/e2e.mjs                       # Chrome gate; needs docker access to the browsercontainer sidecar
 WRITE_VECTORS=1 cargo test              # in sealer/: regenerate vectors/sealed.json
 ```
@@ -38,10 +38,12 @@ The e2e driver serves ports 8800 (launcher), 8801 (home pod) and 8802 (relay) on
 | Sealer | buckets are exact powers of two × 16 KiB; sealing twice gives a fresh key, IV and root |
 | QR round trip (jsQR) | app code **v6** (104 B pointer), **v7** with the v1 locator, home code **v9** (215 B) |
 | NIP-44 | all 8 official v2 vector groups (nostr-tools), plus the extended-prefix boundary table from NIP-44 itself. The key schedule is checked by recomputing the HMAC and ChaCha20 decryption with Node's crypto, because nostr-tools does not export it |
-| Signer (test harness) | scope = parsed origin + path prefix (10 refusal cases); secret single-use; unbound client refused; owner = user key ≠ bunker key; `get_public_key` after session restore without reconnect |
-| Chrome 151 e2e | 12/12 steps (`e2e-results.json`): pair; boot from web seed; signed write-through; LDP listing; unsigned and forged writes refused; policy refusals; cold worker restart with data intact; **a module corrupted in IndexedDB refused on cold start before compiling**; cache re-boot; wrong key → rule 4 **with no new boot, instantiation or boot-record change**; unseeded → rule 2; home code single-use |
+| Signer (test harness) | scope = parsed origin + path prefix, plus exactly one of each known tag, canonical `u`, no encoded traversal, allowed methods (17 refusal cases); https/wss off loopback; secret single-use; unbound client refused; owner = user key ≠ bunker key; `get_public_key` after session restore without reconnect |
+| Chrome 151 e2e | 15/15 steps (`e2e-results.json`): pair (after on-page consent); boot from web seed; signed write-through; LDP listing; unsigned and forged writes refused; policy refusals; cold worker restart with data intact; **a module corrupted in IndexedDB refused on cold start before compiling**; cache re-boot; wrong key → rule 4 **with no new boot, instantiation or boot-record change**; unseeded → rule 2; **a foreign home code shown for consent and left unapplied on cancel**; **an app not run until confirmed**; **pod resources refused as top-level pages, and served with `CSP: sandbox`, `nosniff`, `attachment`**; home code single-use |
 
-Five checks were mutation-tested, each broken once and then restored: rule 7, the pad check, the signer scope check, the worker's persistence and the worker's re-hash. Each break turned exactly the matching case red. The other checks are covered by their vectors but were not mutation-tested.
+Eight checks were mutation-tested, each broken once and then restored: rule 7, the pad check, the signer scope check, the worker's persistence, the worker's re-hash, the consent gate, the navigation refusal and the per-store request lock. Each break turned the matching cases red. The other checks are covered by their vectors but were not mutation-tested.
+
+Security: a cross-vendor evidence audit, an Opus security review and deepsec were run. Their findings, the fixes and what remains open are in [docs/findings.md §7](../../docs/findings.md#7-sealed-single-qr-bootstrap-draft-0).
 
 ## Findings from building it
 

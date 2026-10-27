@@ -103,7 +103,7 @@ Browser capabilities measured in Chrome 151 (`experiments/minimal-pod/browser-re
 ## 5. Next steps
 
 1. **Phone camera test** (blocks the `url43` default): print v15, v20 and v25 `url43` and `binary` symbols, and scan them with Android and iOS camera apps and with `BarcodeDetector` on Android and macOS. Record whether upper-case links open, whether fragments are kept, and frames per second.
-2. **Write a real service-worker shell** around `experiments/minimal-pod/shell.mjs`: IndexedDB storage and a fetch handler, tested in the sidecar Chrome. Consider JSPI (available in Chrome 151) so the module can read storage directly.
+2. ~~Write a real service-worker shell~~ **Done** in `experiments/sealed-launcher` (§7): IndexedDB storage, fetch handler and cold-start re-verification, tested in the sidecar Chrome.
 3. **Content-addressed container and conditional requests in solid-pod-rs**, per §4. This needs an owner decision and edits in that repository.
 4. **Settle NIP-01 escaping estate-wide** (§4), with a shared vector.
 5. **Fuzz** the envelope, frame and wire parsers (`cargo fuzz` on `read_fields`, `parse_request` and a Rust port of `decodeObject`).
@@ -117,12 +117,57 @@ Browser capabilities measured in Chrome 151 (`experiments/minimal-pod/browser-re
 - Real scan throughput and reliable QR versions at a given print size.
 - Exactly how much an Ed25519 pod rung would save (step 6, unmeasured).
 - Whether the solid-pod-rs maintainers accept a content-addressed container.
+- Whether a fragment the launcher clears also leaves global browser history, history sync and the scanning app's own history. The e2e gate only proves `location` and the current history entry are clean.
+
+## 7. Sealed single-QR bootstrap (draft 0)
+
+`experiments/sealed-launcher` implements the README design. One public app code boots the P2 pod as an encrypted blob into a service worker. One private home code pairs the node with a NIP-46 signer and the owner's home pod.
+
+### Measured
+
+| | Value | Source |
+|---|---|---|
+| App code | v6 (104 B pointer), v7 with the v1 locator | `vectors/qr-measured.json` (decoded by jsQR) |
+| Home code | v9 (215 B) | same |
+| Sealed pod blob | 32,768 B (two 16 KiB blocks) | sealer CLI |
+| Chrome 151 end to end | 15/15 steps | `e2e-results.json` |
+| Unit gates | 49 (Node) + 5 (Rust) | `npm test`, `cargo test` |
+
+### What it established
+
+- **The torrent identity and the content identity line up.** For blobs of at most 16 KiB, the BEP 52 root is the blob's SHA-256, and the v2 infohash can be computed from (length, root) alone. This was cross-checked against libtorrent 2.0.15 in JS and Rust.
+- **WebTorrent 3.0.21 is BitTorrent v1 only**, so a browser swarm needs a 20-byte v1 infohash in the pointer as a locator. The locator is never trusted for integrity.
+- **One NIP-98 signature can authorise both the local write and the push home**, if the local pod mirrors home's namespace (`url = home + path`).
+- **A same-document navigation does not reload the page.** A code opened in an existing launcher tab arrives as `hashchange`.
+- **The NIP-44 vector file is partly stale** against NIP-44's extended length prefix. nostr-tools follows the current spec.
+
+### Reviews
+
+Three independent passes were run. Every finding was fixed or is listed below, and each fix was verified by a test that goes red when the fix is removed.
+
+| Source | Finding | Outcome |
+|---|---|---|
+| Cross-vendor audit (Codex `gpt-6-astra`) | "17 vectors" was 16; NIP-44 covered 4 of 8 groups; "runs nothing new" and cold-start corruption untested; mutation claim overstated | All corrected or tested (12 → 15 e2e steps) |
+| Security review (Opus) and deepsec | **High:** module-chosen content types served on the launcher origin could run script with access to the signer session | `/pod/*` responses forced to `CSP: sandbox`, `nosniff` and `attachment`; navigations refused. Mutation-tested |
+| Same | **High:** any site could silently re-pair the launcher or swap the app | Explicit on-page consent for both, with a warning when a pairing is replaced; re-pairing wipes the node. Mutation-tested |
+| Same | Medium: uncapped blob fetch; signer accepted duplicate tags, non-canonical `u`, encoded traversal and any method; cleartext home allowed; no launcher CSP; precondition race | All fixed and tested |
+| Same | Low and bugs: path mapping by URL resolution, CLI could emit an over-limit blob, worker message with no timeout, IndexedDB handle, double cold start, stale state after re-pair | All fixed |
+
+### Still open (known, not fixed)
+
+- **The launcher origin is the trust anchor.** It reads every app key, and the pod runs on its origin, contained but not isolated. Serving `/pod/*` from a separate origin is the stronger fix.
+- **The worker re-hash detects corruption, not an attacker.** A same-origin script can still boot any module (security review M1). The fix is an allowlist of object IDs that pages cannot change, or a separate origin.
+- **NIP-98 replay.** The pod has no event-ID cache. A captured header can be replayed within ±60 s, but only for the same body.
+- **State outlives the tab.** The decrypted module, the replicated resources and the NIP-46 client key stay in IndexedDB until the node is re-paired.
+- **Not built:** the torrent transport, mesh links, a production NIP-46 signer, phone camera tests.
+
 
 ## Reproduce
 
 ```
 node experiments/dynamic-linking/test.mjs
 cd experiments/compression && npm ci && node bench.mjs            # 71 checks
+cd experiments/sealed-launcher && npm ci && npm run build && npm test && node test/e2e.mjs
 cd experiments/minimal-pod && cargo test --offline                # BIP-340 + NIP-98 natively
 node experiments/minimal-pod/test.mjs                             # every rung through the JS shell
 experiments/minimal-pod/build-ladder.sh                           # rebuild rungs (nightly needs network)
