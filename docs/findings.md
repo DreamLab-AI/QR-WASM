@@ -143,7 +143,7 @@ Browser capabilities measured in Chrome 151 (`experiments/minimal-pod/browser-re
 
 ### Reviews
 
-Three independent passes were run. Every finding was fixed or is listed below, and each fix was verified by a test that goes red when the fix is removed.
+Four passes were run (audit, review, two deepsec runs). Every finding was fixed or is listed below, and each fix was verified by a test that goes red when the fix is removed.
 
 | Source | Finding | Outcome |
 |---|---|---|
@@ -152,6 +152,9 @@ Three independent passes were run. Every finding was fixed or is listed below, a
 | Same | **High:** any site could silently re-pair the launcher or swap the app | Explicit on-page consent for both, with a warning when a pairing is replaced; re-pairing wipes the node. Mutation-tested |
 | Same | Medium: uncapped blob fetch; signer accepted duplicate tags, non-canonical `u`, encoded traversal and any method; cleartext home allowed; no launcher CSP; precondition race | All fixed and tested |
 | Same | Low and bugs: path mapping by URL resolution, CLI could emit an over-limit blob, worker message with no timeout, IndexedDB handle, double cold start, stale state after re-pair | All fixed |
+| deepsec re-run | High bug: re-pairing wiped the node before the new pairing was proven. Bugs: early codes dropped before `hashchange` was attached; `op.path` not bound to the request path; module header casing could merge into the containment headers | All fixed; path binding mutation-tested |
+
+**deepsec gate status: still BLOCK.** The re-run (report `20261027T212112Z`) counts 3 HIGH, but they are the three first-run findings on the same root cause, the pod content type on the launcher origin. deepsec keeps findings open until someone triages them in its store. That fix is in the code and covered by e2e, but the findings have not been re-triaged in deepsec, so the gate has **not** passed. That needs a third run, or triage in deepsec.
 
 ### Still open (known, not fixed)
 

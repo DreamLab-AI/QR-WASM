@@ -12,15 +12,15 @@
     {
       "name": "home code pairs with the remote signer; fragment removed from URL",
       "ok": true,
-      "ms": 529,
+      "ms": 547,
       "detail": {
-        "owner": "1e19a2e1d54425a10584d09bdd0b83eead2790534811fc7b3968739ac9c2995e"
+        "owner": "08e44063bbbbbeb8fe1a957260911839d1afa8b7cb7f1880fa0151310b248ca6"
       }
     },
     {
       "name": "app code: fetch from home web seed, verify, unseal, boot pod in service worker",
       "ok": true,
-      "ms": 247,
+      "ms": 251,
       "detail": {
         "source": "home web seed",
         "tried": [
@@ -32,7 +32,7 @@
     {
       "name": "signed write lands locally and at home (one NIP-98 signature via NIP-46)",
       "ok": true,
-      "ms": 72,
+      "ms": 108,
       "detail": {
         "local": 201,
         "home": 201,
@@ -55,7 +55,7 @@
     {
       "name": "unsigned and wrongly signed writes are refused by the module",
       "ok": true,
-      "ms": 7,
+      "ms": 6,
       "detail": {
         "unsigned": 401,
         "forged": 401
@@ -64,7 +64,7 @@
     {
       "name": "signer policy refuses out-of-scope requests from the browser",
       "ok": true,
-      "ms": 124,
+      "ms": 127,
       "detail": {
         "outside": "u is not under home",
         "note": "only kind 27235 (NIP-98) is signed"
@@ -73,16 +73,16 @@
     {
       "name": "service worker stopped and restarted cold: module re-hashed, data intact",
       "ok": true,
-      "ms": 561,
+      "ms": 566,
       "detail": {
-        "before": "4d74d6e3-939f-4f04-b54a-cfdf169d1cc4",
-        "after": "97f9a831-b174-40a3-865c-d4e18148c651"
+        "before": "f7fae8e1-5807-463a-afe7-3b92e1bdd436",
+        "after": "0276880c-c8be-483f-8248-e252f5e94cc9"
       }
     },
     {
       "name": "module corrupted in IndexedDB is refused on cold start, before instantiation",
       "ok": true,
-      "ms": 562,
+      "ms": 569,
       "detail": {
         "status": 500,
         "text": "Error: module does not match its object ID",
@@ -92,7 +92,7 @@
     {
       "name": "re-scanning the app code boots from the verified local cache (and repairs the record)",
       "ok": true,
-      "ms": 254,
+      "ms": 258,
       "detail": {
         "source": "cache"
       }
@@ -100,7 +100,7 @@
     {
       "name": "tampered app code (wrong key) fails at rule 4 and runs nothing new",
       "ok": true,
-      "ms": 260,
+      "ms": 266,
       "detail": {
         "error": "rule 4: AES-GCM authentication failed",
         "boots": 1,
@@ -110,7 +110,7 @@
     {
       "name": "pointer to an unseeded blob fails at rule 2",
       "ok": true,
-      "ms": 249,
+      "ms": 252,
       "detail": {
         "tried": [
           "cache: absent",
@@ -121,7 +121,7 @@
     {
       "name": "a foreign home code is shown for consent and not applied on cancel",
       "ok": true,
-      "ms": 445,
+      "ms": 455,
       "detail": {
         "prompt": {
           "action": "pair with home",
@@ -138,7 +138,7 @@
     {
       "name": "an app code is not run until confirmed",
       "ok": true,
-      "ms": 250,
+      "ms": 254,
       "detail": {
         "boots": 1
       }
@@ -146,7 +146,7 @@
     {
       "name": "pod resources cannot be opened as top-level pages on the launcher origin",
       "ok": true,
-      "ms": 559,
+      "ms": 555,
       "detail": {
         "text": "pod resources cannot be opened as pages"
       }
@@ -154,7 +154,7 @@
     {
       "name": "the home code is single-use: a second browser cannot pair with it",
       "ok": true,
-      "ms": 729,
+      "ms": 865,
       "detail": {
         "error": "secret invalid or already used"
       }

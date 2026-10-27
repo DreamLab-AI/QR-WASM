@@ -84,12 +84,13 @@ async function pair(home) {
   const existing = await kv.get('config');
   await consent({action: 'pair with home', home: home.home, signer: home.signer, relays: home.relays,
     replaces: existing ? existing.home : null, warning: existing ? 'replaces your current pairing and wipes this node' : undefined});
-  if (existing) await wipe();
   show({phase: 'pairing', home: home.home});
   const client = generateSecretKey();
   const s = BunkerSigner.fromBunker(client, {pubkey: home.signer, relays: home.relays, secret: home.secret});
+  // Prove the new pairing before touching the old one: a failed pair leaves this node as it was.
   await timeout(s.connect(), 15000, 'connect');
   const owner = await timeout(s.getPublicKey(), 15000, 'get_public_key');
+  if (existing) await wipe();
   // The secret is single-use, so it is not kept; the client key is what the signer has bound.
   await kv.set('config', {signer: home.signer, relays: home.relays, home: home.home, owner, client: hex(client)});
   signer = s;
@@ -192,7 +193,10 @@ async function trySign(template) {
 
 window.qrw = {status, put, get, trySign, workerStatus: () => ask({type: 'status'})};
 
-let queue = Promise.resolve();
+// Codes queue behind worker registration, but are taken (and cleared from the URL) as they arrive.
+const ready = worker();
+let queue = ready.catch(() => {});
+window.addEventListener('hashchange', () => { const f = take(); if (f) handle(f); });
 const handle = f => (queue = queue.then(async () => {
   // Reset per-code fields so a stale result can never be read as this one's.
   show({phase: 'reading', seq: status.seq + 1, fragmentCleared: location.hash === '',
@@ -208,9 +212,8 @@ const handle = f => (queue = queue.then(async () => {
 
 (async () => {
   try {
-    await worker();
+    await ready;
     show({phase: 'ready', worker: true});
-    window.addEventListener('hashchange', () => { const f = take(); if (f) handle(f); });
     if (fragment) return handle(fragment);
     const s = await ask({type: 'status'});
     show({phase: s.booted ? 'running' : 'idle', booted: s.booted});

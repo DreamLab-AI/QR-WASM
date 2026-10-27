@@ -45,6 +45,8 @@ const locks = new WeakMap();
 
 async function serveNow(pod, store, request) {
   const result = pod.handle(request, await storedFor(store, request.path));
+  // The module may only write the path it was asked about.
+  if (result.op.kind && result.op.path !== request.path) throw new Error(`module wrote ${result.op.path} for ${request.path}`);
   if (result.status < 400) await applyOp(store, result.op);
   const empty = NULL_BODY.has(result.status) || request.method === 'HEAD';
   return {status: result.status, headers: result.headers, body: empty ? null : result.body, error: result.error};

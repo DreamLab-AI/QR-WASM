@@ -113,3 +113,11 @@ test('concurrent writes cannot both pass a precondition', async () => {
   const results = await Promise.all([1, 2, 3].map(() => serve(pod, slow, {method: 'PUT', path: '/x'})));
   assert.deepEqual(results.map(r => r.status).sort(), [201, 412, 412]);
 });
+
+test('a module may only write the path it was asked about', async () => {
+  const {serve, mapStore} = await import('../web/lib/podstore.mjs');
+  const store = mapStore();
+  const pod = {handle: () => ({status: 201, headers: {}, body: new Uint8Array(), op: {kind: 'put', path: '/other', contentType: 't', body: new Uint8Array([1])}})};
+  await assert.rejects(serve(pod, store, {method: 'PUT', path: '/x'}), /module wrote \/other/);
+  assert.equal(await store.get('/other'), undefined);
+});

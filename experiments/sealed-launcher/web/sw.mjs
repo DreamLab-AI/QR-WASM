@@ -89,7 +89,10 @@ async function handle(request, url) {
       body: new Uint8Array(await request.arrayBuffer()),
       now: Math.floor(Date.now() / 1000),
     });
-    return new Response(res.body, {status: res.status, headers: {...res.headers, ...meta, 'x-qrw-loads': String(loads)}});
+    // Header names are case-insensitive: lower-case the module's and drop any it sets that we own,
+    // so "Content-Security-Policy" cannot sit beside ours and be merged into it.
+    const own = Object.fromEntries(Object.entries(res.headers).map(([k, v]) => [k.toLowerCase(), v]).filter(([k]) => !(k in meta)));
+    return new Response(res.body, {status: res.status, headers: {...own, ...meta, 'x-qrw-loads': String(loads)}});
   } catch (err) {
     return new Response(String(err), {status: 500, headers: meta});
   }
